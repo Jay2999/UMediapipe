@@ -428,7 +428,7 @@ new_local_repository(
 new_local_repository(
     name = "windows_opencv",
     build_file = "@//third_party:opencv_windows.BUILD",
-    path = "C:\\opencv\\build",
+    path = "C:\\msys64\\home\\josko\\opencv\\build",
 )
 
 http_archive(
@@ -706,3 +706,7 @@ http_archive(
     urls = ["https://github.com/nlohmann/json/releases/download/v3.9.1/include.zip"],
     build_file = "@//third_party:nlohmann.BUILD",
 )
+
+android_sdk_repository(name = "androidsdk", build_tools_version = "30.0.3", api_level=30)
+android_ndk_repository(name = "androidndk", api_level=21)
+bind(name = "android/crosstool", actual = "@androidndk//:toolchain")

@@ -32,6 +32,11 @@ cc_library(
     alwayslink = 1,
 )
 
+cc_import(
+	name = "c++_shared",
+	shared_library = "libc++_shared.so",
+)
+
 android_binary(
     name = "handtrackinggpu",
     srcs = glob(["*.java"]),
@@ -55,7 +60,7 @@ android_binary(
         "outputVideoStreamName": "output_video",
         "flipFramesVertically": "True",
         "converterNumBuffers": "2",
-        # "modelComplexity": "0" # 0=lite, 1=heavy, not specified=heavy
+        "modelComplexity": "0", # 0=lite, 1=heavy, not specified=heavy
     },
     multidex = "native",
     deps = [
@@ -63,5 +68,6 @@ android_binary(
         "//mediapipe/examples/android/src/java/com/google/mediapipe/apps/basic:basic_lib",
         "//mediapipe/framework/formats:landmark_java_proto_lite",
         "//mediapipe/java/com/google/mediapipe/framework:android_framework",
+		":c++_shared",
     ],
 )

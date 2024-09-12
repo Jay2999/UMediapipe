@@ -1,4 +1,5 @@
 # The bazelrc file for MediaPipe OSS.
+#startup --output_base=../bazel
 
 # Tensorflow needs remote repo
 common --experimental_repo_remote_exec
@@ -21,6 +22,7 @@ build:linux --define=xnn_enable_avx512amx=false
 build:windows --cxxopt=/std:c++17
 build:windows --host_cxxopt=/std:c++17
 build:windows --copt=/w
+build:windows --copt=/O2
 # For using M_* math constants on Windows with MSVC.
 build:windows --copt=/D_USE_MATH_DEFINES
 build:windows --host_copt=/D_USE_MATH_DEFINES
