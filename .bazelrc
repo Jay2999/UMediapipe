@@ -1,5 +1,6 @@
 # The bazelrc file for MediaPipe OSS.
 #startup --output_base=../bazel
+#build --enable_runfiles
 
 # Tensorflow needs remote repo
 common --experimental_repo_remote_exec

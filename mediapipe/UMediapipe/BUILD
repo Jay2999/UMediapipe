@@ -20,24 +20,26 @@ cc_library(
         ":desktop_offline_calculators",
         "//mediapipe/calculators/core:constant_side_packet_calculator",
         "//mediapipe/calculators/core:merge_calculator",
-        "//mediapipe/modules/hand_landmark:hand_landmark_tracking_cpu",
+        "//mediapipe/UMediapipe/graphs:hand_landmark_tracking_cpu",
+        "//mediapipe/calculators/tflite:tflite_model_calculator"
     ],
     alwayslink=True,
 )
 
 cc_library(
     name = "UMediapipe",
-	srcs = ["src/UMediapipe.cpp"],
-    includes = ["include"],
+	srcs = [
+	    "src/hand_landmark_model_bin.cpp",
+        "src/palm_detection_model_bin.cpp",
+        "src/hand_tracking_cpu_graph.cpp",
+	    "src/UMediapipe.cpp",
+	    "src/TfliteModels.h",
+	    "src/Graphs.h",
+	    "//mediapipe/UMediapipe/include:UMediapipe.h"
+	],
     defines = ["DLL_EXPORT"],
-    data = [
-        "//mediapipe/modules/hand_landmark:hand_landmark_lite.tflite",
-        "//mediapipe/modules/palm_detection:palm_detection_lite.tflite",
-        "//mediapipe/UMediapipe/example/desktop/graphs:hand_tracking_desktop_live_stripped.pbtxt",
-    ],
     deps = [
         ":desktop_tflite_calculators",
-		"//mediapipe/framework/port:opencv_highgui",
 		"//mediapipe/framework/port:parse_text_proto",
 		"@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",

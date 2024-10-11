@@ -1,7 +1,11 @@
+#if _MSC_VER
 #ifdef DLL_EXPORT
     #define UMP_API __declspec(dllexport)
 #else
     #define UMP_API __declspec(dllimport)
+#endif
+#else
+    #define UMP_API extern "C"
 #endif
 
 typedef struct landmark_t {
@@ -17,7 +21,7 @@ typedef struct handLandmarks_t {
     Landmark values[21];
 } HandLandmarks;
 
-typedef void (*HandLandmarksCallback)(HandLandmarks*);
+typedef void (__cdecl *HandLandmarksCallback)(HandLandmarks*);
 
 UMP_API void beginLandmarkDetection(HandLandmarksCallback callback);
 UMP_API void stopLandmarkDetection();

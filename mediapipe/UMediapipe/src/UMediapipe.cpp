@@ -9,14 +9,13 @@
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/formats/image_frame.h"
 #include "mediapipe/framework/formats/image_frame_opencv.h"
-#include "mediapipe/framework/port/file_helpers.h"
-#include "mediapipe/framework/port/opencv_highgui_inc.h"
 #include "mediapipe/framework/port/opencv_imgproc_inc.h"
 #include "mediapipe/framework/port/opencv_video_inc.h"
-#include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/formats/landmark.pb.h"
 #include "mediapipe/framework/port/status.h"
-#include "mediapipe/util/resource_util.h"
+
+#include "TfliteModels.h"
+#include "Graphs.h"
 
 constexpr char kInputStream[] = "input_video";
 constexpr char kOutputStream[] = "landmarks";
@@ -64,11 +63,7 @@ static void grabFrames() {
 }
 
 UMP_API void beginLandmarkDetection(HandLandmarksCallback callback) {
-    std::string calculator_graph_config_contents;
-    std::string calculator_graph_path = "mediapipe/UMediapipe/example/desktop/graphs/hand_tracking_desktop_live_stripped.pbtxt";
-    mediapipe::file::GetContents(calculator_graph_path, &calculator_graph_config_contents);
-    ABSL_LOG(INFO) << "Get calculator graph config contents: " << calculator_graph_config_contents;
-    mediapipe::CalculatorGraphConfig config = mediapipe::ParseTextProtoOrDie<mediapipe::CalculatorGraphConfig>(calculator_graph_config_contents);
+    mediapipe::CalculatorGraphConfig config = getHandLandmarkGraphConfigCpu();
 
     ABSL_LOG(INFO) << "Initialize the calculator graph.";
     ABSL_LOG(INFO) << graph.Initialize(config);
@@ -77,11 +72,8 @@ UMP_API void beginLandmarkDetection(HandLandmarksCallback callback) {
 
     // Set callback
     graph.ObserveOutputStream(kOutputStream,
-        [&callback](const mediapipe::Packet& packet) -> mediapipe::Status {
+        [callback](const mediapipe::Packet& packet) -> mediapipe::Status {
     		auto& data = packet.Get<std::vector<mediapipe::NormalizedLandmarkList>>();
-    		/*if (data.size() > 0) {
-    			ABSL_LOG(INFO) << "Detected: " << data[0].landmark(0).x();
-    		}*/
     		HandLandmarks landmarks;
     		for (int i = 0; i < 21 && data.size() > 0; ++i) {
     		    Landmark& landmark = landmarks.values[i];
@@ -89,13 +81,17 @@ UMP_API void beginLandmarkDetection(HandLandmarksCallback callback) {
     		    landmark.y() = data[0].landmark(i).y();
     		    landmark.z() = data[0].landmark(i).z();
     		}
-    		if (callback) {
+    		if (callback != 0x0) {
     		    callback(&landmarks);
     		}
     		return mediapipe::Status();
         }
     );
-    ABSL_LOG(INFO) << graph.StartRun({});
+    std::map<std::string, mediapipe::Packet> extra_side_packets;
+    extra_side_packets["hand_landmark_model"] = mediapipe::PointToForeign<std::string>(&models::hand_landmark_model);
+    extra_side_packets["palm_detection_model"] = mediapipe::PointToForeign<std::string>(&models::palm_detection_model);
+    extra_side_packets["num_hands"] = mediapipe::MakePacket<int>(2);
+    ABSL_LOG(INFO) << graph.StartRun(extra_side_packets);
     grab_frames = true;
     grabberThread = new std::thread(grabFrames);
 }
@@ -107,5 +103,6 @@ UMP_API void stopLandmarkDetection() {
 UMP_API void waitForEnd() {
     grabberThread->join();
     delete grabberThread;
+    grabberThread = nullptr;
     graph.WaitUntilDone();
 }

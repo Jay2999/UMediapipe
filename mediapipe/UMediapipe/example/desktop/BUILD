@@ -29,11 +29,6 @@ cc_library(
 
 cc_import(
     name = "UMediapipe_shared",
-    data = [
-        "//mediapipe/modules/hand_landmark:hand_landmark_lite.tflite",
-        "//mediapipe/modules/palm_detection:palm_detection_lite.tflite",
-        "//mediapipe/UMediapipe/example/desktop/graphs:hand_tracking_desktop_live_stripped.pbtxt",
-    ],
     hdrs = ["//mediapipe/UMediapipe/include:UMediapipe.h"],
     interface_library = "//bazel-bin/mediapipe/UMediapipe:UMediapipe_shared.if.lib",
     shared_library = "//bazel-bin/mediapipe/UMediapipe:UMediapipe_shared.dll",
@@ -42,6 +37,11 @@ cc_import(
 cc_binary(
     name = "ump_desktop_example",
     srcs = ["main.cpp"],
+    data = [
+        "//mediapipe/UMediapipe/data:hand_landmark_lite.tflite",
+        "//mediapipe/UMediapipe/data:palm_detection_lite.tflite",
+        "//mediapipe/UMediapipe/data:hand_tracking_desktop_live_stripped.pbtxt",
+    ],
     deps = [
         ":UMediapipe_shared",
         "//third_party:opencv",
