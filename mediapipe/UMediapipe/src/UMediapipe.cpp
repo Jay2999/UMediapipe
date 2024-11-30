@@ -59,6 +59,7 @@ static void grabFrames() {
         graph.AddPacketToInputStream(kInputStream, mediapipe::Adopt(input_frame.release()).At(mediapipe::Timestamp(frame_timestamp_us)));
     }
     ABSL_LOG(INFO) << "Shutting down.";
+    capture.release();
     graph.CloseInputStream(kInputStream);
 }
 
