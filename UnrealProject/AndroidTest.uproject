@@ -27,6 +27,10 @@
 		{
 			"Name": "GoogleVRHMD",
 			"Enabled": true
+		},
+		{
+			"Name": "AndroidCamera",
+			"Enabled": true
 		}
 	]
 }

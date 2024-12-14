@@ -17,6 +17,9 @@
 #include "TfliteModels.h"
 #include "Graphs.h"
 
+#include <android/log.h>
+#define APP_NAME "UMediapipe"
+
 constexpr char kInputStream[] = "input_video";
 constexpr char kOutputStream[] = "landmarks";
 
@@ -64,12 +67,14 @@ static void grabFrames() {
 }
 
 UMP_API void beginLandmarkDetection(HandLandmarksCallback callback) {
-    mediapipe::CalculatorGraphConfig config = getHandLandmarkGraphConfigCpu();
+    mediapipe::CalculatorGraphConfig config = getHandLandmarkGraphConfigGpu();
 
-    ABSL_LOG(INFO) << "Initialize the calculator graph.";
-    ABSL_LOG(INFO) << graph.Initialize(config);
+    __android_log_print(ANDROID_LOG_VERBOSE, APP_NAME, "Initialize the calculator graph.");
+    std::string s = graph.Initialize(config).ToString();
+    __android_log_print(ANDROID_LOG_VERBOSE, APP_NAME, s.c_str());
 
     ABSL_LOG(INFO) << "Start running the calculator graph.";
+    __android_log_print(ANDROID_LOG_VERBOSE, APP_NAME, "Start running the calculator graph.");
 
     // Set callback
     graph.ObserveOutputStream(kOutputStream,
@@ -92,9 +97,12 @@ UMP_API void beginLandmarkDetection(HandLandmarksCallback callback) {
     extra_side_packets["hand_landmark_model"] = mediapipe::PointToForeign<std::string>(&models::hand_landmark_model);
     extra_side_packets["palm_detection_model"] = mediapipe::PointToForeign<std::string>(&models::palm_detection_model);
     extra_side_packets["num_hands"] = mediapipe::MakePacket<int>(2);
-    ABSL_LOG(INFO) << graph.StartRun(extra_side_packets);
-    grab_frames = true;
-    grabberThread = new std::thread(grabFrames);
+
+    s = graph.StartRun(extra_side_packets).ToString();
+    __android_log_print(ANDROID_LOG_VERBOSE, APP_NAME, s.c_str());
+
+    //grab_frames = true;
+    //grabberThread = new std::thread(grabFrames);
 }
 
 UMP_API void stopLandmarkDetection() {
@@ -106,4 +114,15 @@ UMP_API void waitForEnd() {
     delete grabberThread;
     grabberThread = nullptr;
     graph.WaitUntilDone();
+}
+
+UMP_API void sendFrame(unsigned char* data, int width, int height) {
+    auto input_frame = absl::make_unique<mediapipe::ImageFrame>(
+            mediapipe::ImageFormat::SRGB, width, height,
+            mediapipe::ImageFrame::kDefaultAlignmentBoundary
+    );
+    input_frame->CopyPixelData(mediapipe::ImageFormat::SRGB, width, height, data, mediapipe::ImageFrame::kDefaultAlignmentBoundary);
+
+    size_t frame_timestamp_us = (double)cv::getTickCount() / (double)cv::getTickFrequency() * 1e6;
+    graph.AddPacketToInputStream(kInputStream, mediapipe::Adopt(input_frame.release()).At(mediapipe::Timestamp(frame_timestamp_us)));
 }

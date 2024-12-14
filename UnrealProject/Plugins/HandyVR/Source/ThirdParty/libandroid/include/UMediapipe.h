@@ -1,4 +1,4 @@
-#if _MSC_VER
+#ifdef _MSC_VER
     #define UMP_CALL __cdecl
     #ifdef DLL_EXPORT
         #define UMP_API __declspec(dllexport)

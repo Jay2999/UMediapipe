@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Engine/TextureRenderTarget2D.h"
 #include "ExampleActor.generated.h"
 
 UCLASS()
@@ -23,4 +24,12 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UPROPERTY(VisibleAnywhere)
+	UStaticMeshComponent* Plane;
+
+private:
+	TWeakObjectPtr<UTextureRenderTarget2D> cameraTextureRT;
+	int32 cameraWidth;
+	int32 cameraHeight;
+	TArray<FColor> pixels;
 };

@@ -27,6 +27,15 @@ cc_library(
 )
 
 cc_library(
+    name = "mobile_calculators",
+    deps = [
+        "//mediapipe/calculators/core:constant_side_packet_calculator",
+        "//mediapipe/calculators/core:flow_limiter_calculator",
+        "//mediapipe/UMediapipe/graphs:hand_landmark_tracking_gpu",
+    ],
+)
+
+cc_library(
     name = "UMediapipe",
 	srcs = [
 	    "src/hand_landmark_model_bin.cpp",
@@ -40,6 +49,7 @@ cc_library(
     defines = ["DLL_EXPORT"],
     deps = [
         ":desktop_tflite_calculators",
+        ":mobile_calculators",
 		"//mediapipe/framework/port:parse_text_proto",
 		"@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
