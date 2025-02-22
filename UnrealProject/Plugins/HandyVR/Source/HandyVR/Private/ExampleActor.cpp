@@ -4,13 +4,15 @@
 #include "ExampleActor.h"
 #include "Components/StaticMeshComponent.h"
 #include <Kismet/KismetRenderingLibrary.h>
-#include "ThirdParty/libandroid/include/libandroid.h"
 
-
-#ifndef _MSC_VER
-#include "ThirdParty/libandroid/include/UMediapipe.h"
-#endif // !_MSC_VER
-
+float lx = 0;
+float rx = 0;
+void leftHandCallback(UMediapipe::HandLandmarks* landmarks) {
+	lx = (*landmarks)[0].x();
+}
+void rightHandCallback(UMediapipe::HandLandmarks* landmarks) {
+	rx = (*landmarks)[0].x();
+}
 
 // Sets default values
 AExampleActor::AExampleActor()
@@ -43,64 +45,52 @@ AExampleActor::AExampleActor()
 	cameraWidth = 1280;
 	cameraHeight = 720;
 	pixels.AddUninitialized(cameraWidth * cameraHeight);
+	rgbArray = new unsigned char[cameraWidth * cameraHeight * 3];
+	ump = new UMediapipe::UMediapipe(leftHandCallback, rightHandCallback, cameraWidth, cameraHeight);
 }
 
-float x = 0;
-#ifndef _MSC_VER
-void __cdecl callback(HandLandmarks* landmarks) {
-	x = landmarks->values[0].x();
+AExampleActor::~AExampleActor()
+{
+	ump->stopLandmarkDetection();
+	delete ump;
+	ump = nullptr;
+	delete[] rgbArray;
+	rgbArray = nullptr;
 }
-#endif // !_MSC_VER
 
 // Called when the game starts or when spawned
 void AExampleActor::BeginPlay()
 {
 	Super::BeginPlay();
-#ifndef _MSC_VER
-	beginLandmarkDetection(callback);
-#endif // !_MSC_VER
 	cameraTextureRT = UKismetRenderingLibrary::CreateRenderTarget2D(this, cameraWidth, cameraHeight, RTF_RGBA8);
+	ump->beginLandmarkDetection();
 }
 
 // Called every frame
 void AExampleActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	int n = getNumber();
-	const char* text = getText();
 
 	if (Plane->GetMaterial(0)) {
 		UKismetRenderingLibrary::DrawMaterialToRenderTarget(Plane, cameraTextureRT.Get(), Plane->GetMaterial(0));
 		FRenderTarget* rt = cameraTextureRT->GameThread_GetRenderTargetResource();
 		//cameraTextureRT->Resource->TextureRHI->GetTexture2D()->GetNativeResource(); // native texture
 		rt->ReadPixels(pixels);
-#ifndef _MSC_VER
-		unsigned char* rgb = new unsigned char[cameraWidth * cameraHeight * 3];
+
 		int it = 0;
 		for (int i = 0; i < pixels.Num(); ++i) {
-			rgb[it++] = pixels[i].R;
-			rgb[it++] = pixels[i].G;
-			rgb[it++] = pixels[i].B;
+			rgbArray[it++] = pixels[i].R;
+			rgbArray[it++] = pixels[i].G;
+			rgbArray[it++] = pixels[i].B;
 		}
-		sendFrame(rgb, cameraWidth, cameraHeight);
-		delete[] rgb;
-#endif // !_MSC_VER
+		ump->sendFrame(rgbArray);
 	}
 
 	if (GEngine) {
 		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("Number is %d"), n), true, FVector2D(-3, 3));
 		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString(text), true, FVector2D(-3, 3));
-		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("X = %f"), x), true, FVector2D(6, -6));
+		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("X = %f"), lx), true, FVector2D(6, -6));
+		UE_LOG(LogTemp, Log, TEXT("X = %f"), lx);
 		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("P = %d"), pixels[0].R), true);
 	}
 }
-
-#ifdef _MSC_VER
-int __cdecl getNumber() {
-	return 99;
-}
-const char* __cdecl getText() {
-	static const char* txt = "this is text from unreal (99)";
-	return txt;
-}
-#endif

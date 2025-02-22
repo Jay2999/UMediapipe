@@ -33,23 +33,29 @@ cc_library(
         "//mediapipe/calculators/core:flow_limiter_calculator",
         "//mediapipe/UMediapipe/graphs:hand_landmark_tracking_gpu",
     ],
+    alwayslink = True,
 )
 
 cc_library(
-    name = "UMediapipe",
+    name = "UMediapipe_static",
 	srcs = [
 	    "src/hand_landmark_model_bin.cpp",
         "src/palm_detection_model_bin.cpp",
-        "src/hand_tracking_cpu_graph.cpp",
+        "src/hand_tracking_graph.cpp",
 	    "src/UMediapipe.cpp",
 	    "src/TfliteModels.h",
 	    "src/Graphs.h",
-	    "//mediapipe/UMediapipe/include:UMediapipe.h"
+	    "src/Debug.h",
+	    "//mediapipe/UMediapipe/include:UMediapipe.h",
+	    "//mediapipe/UMediapipe/include:Platform.h",
+	    "//mediapipe/UMediapipe/include:Types.h",
 	],
-    defines = ["DLL_EXPORT"],
+    defines = [
+        "DLL_EXPORT",
+        "DEBUG_BUILD",
+    ],
     deps = [
         ":desktop_tflite_calculators",
-        ":mobile_calculators",
 		"//mediapipe/framework/port:parse_text_proto",
 		"@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
@@ -58,8 +64,19 @@ cc_library(
     alwayslink = True,
 )
 
+config_setting(
+    name = "arm_build",
+    values = {"cpu": "arm64-v8a"},
+)
+
 cc_binary(
-    name = "UMediapipe_shared",
-    deps = [":UMediapipe"],
+    name = "UMediapipe",
+    deps = [
+        ":UMediapipe_static",
+        ] +
+        select({
+            ":arm_build": [":mobile_calculators"],
+            "//conditions:default": [],
+        }),
     linkshared = True,
 )

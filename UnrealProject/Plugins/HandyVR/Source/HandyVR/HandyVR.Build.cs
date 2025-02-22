@@ -38,7 +38,7 @@ public class HandyVR : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
-				// ... add private dependencies that you statically link with here ...	
+				"libHandyVR",
 			}
 			);
 		
@@ -50,9 +50,9 @@ public class HandyVR : ModuleRules
 			}
 			);
 
-		if (Target.Platform == UnrealTargetPlatform.Android)
+		/*if (Target.Platform == UnrealTargetPlatform.Android)
 		{
-			PrivateDependencyModuleNames.Add("libandroid");
-		}
+			PrivateDependencyModuleNames.Add("libHandyVR");
+		}*/
 	}
 }
