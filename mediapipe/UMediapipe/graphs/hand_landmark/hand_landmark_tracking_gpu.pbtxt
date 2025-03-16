@@ -14,10 +14,8 @@ input_stream: "IMAGE:image"
 # Max number of hands to detect/track. (int)
 input_side_packet: "NUM_HANDS:num_hands"
 
-# Complexity of hand landmark and palm detection models: 0 or 1. Accuracy as
-# well as inference latency generally go up with the model complexity. If
-# unspecified, functions as set to 1. (int)
-input_side_packet: "MODEL_COMPLEXITY:model_complexity"
+input_side_packet: "MODEL_BLOB_HAND:hand_landmark_model"
+input_side_packet: "MODEL_BLOB_PALM:palm_detection_model"
 
 # Whether landmarks on the previous image should be used to help localize
 # landmarks on the current image. (bool)
@@ -61,6 +59,23 @@ output_stream: "HAND_ROIS_FROM_LANDMARKS:hand_rects"
 # (std::vector<NormalizedRect>)
 output_stream: "HAND_ROIS_FROM_PALM_DETECTIONS:hand_rects_from_palm_detections"
 
+node {
+  calculator: "FlowLimiterCalculator"
+  input_stream: "image"
+  input_stream: "FINISHED:prev_hand_rects_from_landmarks"
+  input_stream_info: {
+    tag_index: "FINISHED"
+    back_edge: true
+  }
+  output_stream: "throttled_input_image_cpu"
+}
+
+node {
+    calculator: "ImageFrameToGpuBufferCalculator"
+    input_stream: "throttled_input_image_cpu"
+    output_stream: "throttled_input_image"
+}
+
 # When the optional input side packet "use_prev_landmarks" is either absent or
 # set to true, uses the landmarks on the previous image to help localize
 # landmarks on the current image.
@@ -90,7 +105,7 @@ node {
 # round of palm detection.
 node {
   calculator: "GateCalculator"
-  input_stream: "image"
+  input_stream: "throttled_input_image"
   input_stream: "DISALLOW:prev_has_enough_hands"
   output_stream: "palm_detection_image"
   options: {
@@ -103,7 +118,7 @@ node {
 # Detects palms.
 node {
   calculator: "PalmDetectionGpu"
-  input_side_packet: "MODEL_COMPLEXITY:model_complexity"
+  input_side_packet: "MODEL_BLOB_PALM:palm_detection_model"
   input_stream: "IMAGE:palm_detection_image"
   output_stream: "DETECTIONS:all_palm_detections"
 }
@@ -175,7 +190,7 @@ node {
 # Extracts image size.
 node {
   calculator: "ImagePropertiesCalculator"
-  input_stream: "IMAGE_GPU:image"
+  input_stream: "IMAGE_GPU:throttled_input_image"
   output_stream: "SIZE:image_size"
 }
 
@@ -187,7 +202,7 @@ node {
 node {
   calculator: "BeginLoopNormalizedRectCalculator"
   input_stream: "ITERABLE:hand_rects"
-  input_stream: "CLONE:0:image"
+  input_stream: "CLONE:0:throttled_input_image"
   input_stream: "CLONE:1:image_size"
   output_stream: "ITEM:single_hand_rect"
   output_stream: "CLONE:0:image_for_landmarks"
@@ -198,7 +213,7 @@ node {
 # Detect hand landmarks for the specific hand rect.
 node {
   calculator: "HandLandmarkGpu"
-  input_side_packet: "MODEL_COMPLEXITY:model_complexity"
+  input_side_packet: "MODEL_BLOB_HAND:hand_landmark_model"
   input_stream: "IMAGE:image_for_landmarks"
   input_stream: "ROI:single_hand_rect"
   output_stream: "LANDMARKS:single_hand_landmarks"
@@ -262,7 +277,7 @@ node {
 # timestamp bound update occurs to jump start the feedback loop.
 node {
   calculator: "PreviousLoopbackCalculator"
-  input_stream: "MAIN:image"
+  input_stream: "MAIN:throttled_input_image"
   input_stream: "LOOP:hand_rects_from_landmarks"
   input_stream_info: {
     tag_index: "LOOP"

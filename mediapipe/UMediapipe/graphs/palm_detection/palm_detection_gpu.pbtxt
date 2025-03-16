@@ -5,10 +5,7 @@ type: "PalmDetectionGpu"
 # GPU image. (GpuBuffer)
 input_stream: "IMAGE:image"
 
-# Complexity of the palm detection model: 0 or 1. Accuracy as well as inference
-# latency generally go up with the model complexity. If unspecified, functions
-# as set to 1. (int)
-input_side_packet: "MODEL_COMPLEXITY:model_complexity"
+input_side_packet: "MODEL_BLOB_PALM:model_blob"
 
 # Detected palms. (std::vector<Detection>)
 # NOTE: there will not be an output packet in the DETECTIONS stream for this
@@ -52,8 +49,8 @@ node {
 
 # Loads the palm detection TF Lite model.
 node {
-  calculator: "PalmDetectionModelLoader"
-  input_side_packet: "MODEL_COMPLEXITY:model_complexity"
+  calculator: "TfLiteModelCalculator"
+  input_side_packet: "MODEL_BLOB:model_blob"
   output_side_packet: "MODEL:model"
 }
 

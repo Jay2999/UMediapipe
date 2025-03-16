@@ -1,28 +1,17 @@
-#if _MSC_VER
-#ifdef DLL_EXPORT
-    #define UMP_API __declspec(dllexport)
-#else
-    #define UMP_API __declspec(dllimport)
-#endif
-#else
-    #define UMP_API extern "C"
-#endif
+#pragma once
 
-typedef struct landmark_t {
-public:
-    inline float& x() { return values[0]; }
-    inline float& y() { return values[1]; }
-    inline float& z() { return values[2]; }
-private:
-    float values[3];
-} Landmark;
+#include "Types.h"
 
-typedef struct handLandmarks_t {
-    Landmark values[21];
-} HandLandmarks;
-
-typedef void (__cdecl *HandLandmarksCallback)(HandLandmarks*);
-
-UMP_API void beginLandmarkDetection(HandLandmarksCallback callback);
-UMP_API void stopLandmarkDetection();
-UMP_API void waitForEnd();
+namespace ump {
+    class UMP_API UMediapipe {
+    private:
+        unsigned frameWidth;
+        unsigned frameHeight;
+    public:
+        UMediapipe(HandLandmarksCallback handCallback, unsigned frameWidth, unsigned frameHeight);
+        void sendFrame(unsigned char *data);
+        void beginLandmarkDetection();
+        void stopLandmarkDetection();
+        ~UMediapipe();
+    };
+}
