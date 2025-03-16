@@ -64,6 +64,30 @@ cc_library(
     alwayslink = True,
 )
 
+cc_library(
+    name = "UMediapipe_static2",
+    hdrs = [
+        "//mediapipe/UMediapipe/include:UMediapipe.h",
+        "//mediapipe/UMediapipe/include:Platform.h",
+        "//mediapipe/UMediapipe/include:Types.h",
+    ],
+	srcs = [
+        "src/gesture_recognizer_model_bin.cpp",
+	    "src/UMediapipe2.cpp",
+	    "src/TfliteModels2.h",
+	    "src/Graphs.h",
+	    "src/Debug.h",
+	],
+    defines = [
+        "DLL_EXPORT",
+        "DEBUG_BUILD",
+    ],
+    deps = [
+        "//mediapipe/tasks/cc/vision/gesture_recognizer:gesture_recognizer",
+    ],
+    alwayslink = True,
+)
+
 config_setting(
     name = "arm_build",
     values = {"cpu": "arm64-v8a"},
@@ -72,11 +96,7 @@ config_setting(
 cc_binary(
     name = "UMediapipe",
     deps = [
-        ":UMediapipe_static",
-        ] +
-        select({
-            ":arm_build": [":mobile_calculators"],
-            "//conditions:default": [],
-        }),
+        ":UMediapipe_static2",
+    ],
     linkshared = True,
 )

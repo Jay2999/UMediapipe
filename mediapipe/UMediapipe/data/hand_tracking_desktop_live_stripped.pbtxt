@@ -13,6 +13,9 @@ input_side_packet: "NUM_HANDS:num_hands"
 # Landmarks
 output_stream: "landmarks"
 
+# Handedness
+output_stream: "handedness"
+
 # Detects/tracks hand landmarks.
 node {
   calculator: "HandLandmarkTrackingCpu"

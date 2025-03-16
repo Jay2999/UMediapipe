@@ -1,3 +1,5 @@
+#pragma once
+
 #ifdef _MSC_VER
 #define WINDOWS 1
 #define ANDROID 0

@@ -35,5 +35,5 @@ private:
 	uint32 cameraHeight;
 	TArray<FColor> pixels;
 	unsigned char* rgbArray = nullptr;
-	UMediapipe::UMediapipe* ump = nullptr;
+	ump::UMediapipe* _ump = nullptr;
 };

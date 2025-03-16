@@ -24,7 +24,7 @@ constexpr char kOutputStream[] = "landmarks";
 static mediapipe::CalculatorGraph graph;
 static bool isGraphRunning = false;
 
-namespace UMediapipe {
+namespace ump {
 
     UMediapipe::UMediapipe(HandLandmarksCallback leftHandCallback,
                            HandLandmarksCallback rightHandCallback,

@@ -2,7 +2,7 @@
 set -e
 cd /c/msys64/home/josko/HandTracker
 
-bazel build -c opt --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/UMediapipe:UMediapipe \
+bazel build -c opt --jobs 16 --define MEDIAPIPE_DISABLE_GPU=1 mediapipe/UMediapipe:UMediapipe \
   --action_env PYTHON_BIN_PATH="C://PROGRA~1//python3//python.exe" \
   --action_env PATH="$PATH:$HOME/python3:$HOME/python3/Scripts"
 

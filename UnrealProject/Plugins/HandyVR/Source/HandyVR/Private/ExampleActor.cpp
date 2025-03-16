@@ -6,12 +6,10 @@
 #include <Kismet/KismetRenderingLibrary.h>
 
 float lx = 0;
-float rx = 0;
-void leftHandCallback(UMediapipe::HandLandmarks* landmarks) {
+FString label = "";
+void handCallback(ump::HandLandmarks* landmarks) {
 	lx = (*landmarks)[0].x();
-}
-void rightHandCallback(UMediapipe::HandLandmarks* landmarks) {
-	rx = (*landmarks)[0].x();
+	label = landmarks->getHandedness() == ump::Handedness::LEFT ? "Left" : "Right";
 }
 
 // Sets default values
@@ -25,35 +23,27 @@ AExampleActor::AExampleActor()
 	Plane = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Plane"));
 	if (Plane) {
 		Plane->SetupAttachment(RootComponent);
+#if ANDROID
+		Plane->SetRelativeScale3D(FVector(-1, 1, 1));
+#endif
 		static ConstructorHelpers::FObjectFinder<UStaticMesh> PlaneFinder(TEXT("/Engine/BasicShapes/Plane.Plane"));
 		if (PlaneFinder.Succeeded()) {
 			Plane->SetStaticMesh(PlaneFinder.Object);
 		}
-		/*static ConstructorHelpers::FObjectFinder<UMaterial> MaterialFinder(TEXT("/HandyVR/CameraTextureMaterial.CameraTextureMaterial"));
-		if (MaterialFinder.Succeeded()) {
-			Plane->SetMaterial(0, MaterialFinder.Object);
-		}*/
 	}
 
-	/*cameraTextureRT = NewObject<UTextureRenderTarget2D>(GetTransientPackage(),
-		MakeUniqueObjectName(GetTransientPackage(), UTextureRenderTarget2D::StaticClass()));
-	cameraTextureRT->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA8;
-	cameraTextureRT->ClearColor = FLinearColor::Black;
-	cameraTextureRT->bAutoGenerateMips = false;
-	cameraTextureRT->InitAutoFormat(500, 500);
-	cameraTextureRT->UpdateResourceImmediate(true);*/
-	cameraWidth = 1280;
-	cameraHeight = 720;
+	cameraWidth = 640;
+	cameraHeight = 480;
 	pixels.AddUninitialized(cameraWidth * cameraHeight);
 	rgbArray = new unsigned char[cameraWidth * cameraHeight * 3];
-	ump = new UMediapipe::UMediapipe(leftHandCallback, rightHandCallback, cameraWidth, cameraHeight);
+	_ump = new ump::UMediapipe(handCallback, cameraWidth, cameraHeight);
 }
 
 AExampleActor::~AExampleActor()
 {
-	ump->stopLandmarkDetection();
-	delete ump;
-	ump = nullptr;
+	_ump->stopLandmarkDetection();
+	delete _ump;
+	_ump = nullptr;
 	delete[] rgbArray;
 	rgbArray = nullptr;
 }
@@ -63,7 +53,7 @@ void AExampleActor::BeginPlay()
 {
 	Super::BeginPlay();
 	cameraTextureRT = UKismetRenderingLibrary::CreateRenderTarget2D(this, cameraWidth, cameraHeight, RTF_RGBA8);
-	ump->beginLandmarkDetection();
+	_ump->beginLandmarkDetection();
 }
 
 // Called every frame
@@ -71,7 +61,7 @@ void AExampleActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (Plane->GetMaterial(0)) {
+	if (Plane->GetMaterial(0) && cameraTextureRT.IsValid()) {
 		UKismetRenderingLibrary::DrawMaterialToRenderTarget(Plane, cameraTextureRT.Get(), Plane->GetMaterial(0));
 		FRenderTarget* rt = cameraTextureRT->GameThread_GetRenderTargetResource();
 		//cameraTextureRT->Resource->TextureRHI->GetTexture2D()->GetNativeResource(); // native texture
@@ -83,14 +73,19 @@ void AExampleActor::Tick(float DeltaTime)
 			rgbArray[it++] = pixels[i].G;
 			rgbArray[it++] = pixels[i].B;
 		}
-		ump->sendFrame(rgbArray);
+		_ump->sendFrame(rgbArray);
 	}
 
 	if (GEngine) {
 		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("Number is %d"), n), true, FVector2D(-3, 3));
 		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString(text), true, FVector2D(-3, 3));
-		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("X = %f"), lx), true, FVector2D(6, -6));
-		UE_LOG(LogTemp, Log, TEXT("X = %f"), lx);
+		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("X = %f"), lx), true, FVector2D(6, -6));
+#if WINDOWS
+		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, label, true);
+#else
+		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, label, true, FVector2D(6, -6));
+#endif
+		//UE_LOG(LogTemp, Log, TEXT("X = %f"), lx);
 		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("P = %d"), pixels[0].R), true);
 	}
 }
