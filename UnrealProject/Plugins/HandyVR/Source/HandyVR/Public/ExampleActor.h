@@ -26,14 +26,22 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	UPROPERTY(VisibleAnywhere)
-	UStaticMeshComponent* Plane;
+	UFUNCTION(BlueprintCallable)
+	FTransform pollTransformLeft() const;
+
+	UFUNCTION(BlueprintCallable)
+	FTransform pollTransformRight() const;
 
 private:
-	TWeakObjectPtr<UTextureRenderTarget2D> cameraTextureRT;
 	uint32 cameraWidth;
 	uint32 cameraHeight;
 	TArray<FColor> pixels;
 	unsigned char* rgbArray = nullptr;
 	ump::UMediapipe* _ump = nullptr;
+
+	UPROPERTY()
+	UTextureRenderTarget2D* cameraTextureRT;
+
+	UPROPERTY()
+	UMaterial* cameraTextureMaterial = nullptr;
 };

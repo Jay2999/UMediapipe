@@ -22,6 +22,6 @@
 #ifdef DLL_EXPORT
     #define UMP_CALL
 #else
-    #define UMP_CALL __attribute__((weak))
+    #define UMP_CALL //__attribute__((weak))
 #endif // DLL_EXPORT
 #endif // ANDROID

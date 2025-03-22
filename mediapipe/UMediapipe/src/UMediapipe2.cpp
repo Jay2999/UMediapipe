@@ -9,22 +9,38 @@ namespace ump {
     using namespace mediapipe::tasks::vision::gesture_recognizer;
 
     std::unique_ptr<GestureRecognizer> graph = nullptr;
-    HandLandmarksCallback handCallback = nullptr;
+    HandDetectionCallback handCallback = nullptr;
+
+    const static std::map<std::string, HandGestures> gesturesMap {
+        {"None", HandGestures::NONE},
+        {"Open_Palm", HandGestures::OPEN_PALM},
+        {"Closed_Fist", HandGestures::CLOSED_FIST}
+    };
 
     void recognizer_callback(absl::StatusOr<GestureRecognizerResult> result, const mediapipe::Image &image, int64_t timestamp) {
         if (!result.ok()) {
+            std::string msg = result.status().ToString();
+            DEBUG(msg.c_str());
             return;
         }
         auto dataVec = result->hand_landmarks;
-        HandLandmarks landmarks[2];
+        HandDetectionResult hands[2];
         for (int j = 0; j < 2 && j < dataVec.size(); ++j) {
             for (int i = 0; i < 21 && dataVec[j].landmark_size() > 0; ++i) {
-                Landmark& landmark = landmarks[j][i];
+                Landmark& landmark = hands[j].Landmarks(i);
                 landmark.x() = dataVec[j].landmark(i).x();
                 landmark.y() = dataVec[j].landmark(i).y();
                 landmark.z() = dataVec[j].landmark(i).z();
             }
         }
+        for (int i = 0; i < 2 && i < result->gestures.size(); ++i) {
+            const std::string& gestureName = result->gestures[i].classification(0).label();
+            if (gesturesMap.find(gestureName) != gesturesMap.end()) {
+                HandGestures& gesture = hands[i].Gesture();
+                gesture = gesturesMap.at(gestureName);
+            }
+        }
+
         // Two hands
         if (result->handedness.size() > 1) {
             std::string label1 = result->handedness[0].classification(0).label();
@@ -39,34 +55,34 @@ namespace ump {
                 }
             }
             if (label1 == "Left") {
-                landmarks[0].getHandedness() = Handedness::LEFT;
-                landmarks[1].getHandedness() = Handedness::RIGHT;
+                hands[0].getHandedness() = Handedness::LEFT;
+                hands[1].getHandedness() = Handedness::RIGHT;
             } else {
-                landmarks[0].getHandedness() = Handedness::RIGHT;
-                landmarks[1].getHandedness() = Handedness::LEFT;
+                hands[0].getHandedness() = Handedness::RIGHT;
+                hands[1].getHandedness() = Handedness::LEFT;
             }
-            handCallback(&landmarks[0]);
-            handCallback(&landmarks[1]);
+            handCallback(&hands[0]);
+            handCallback(&hands[1]);
 
         // One hand
         } else if (result->handedness.size() > 0) {
             const std::string& label = result->handedness[0].classification(0).label();
             if (label == "Left") {
-                landmarks[0].getHandedness() = Handedness::LEFT;
+                hands[0].getHandedness() = Handedness::LEFT;
             } else {
-                landmarks[0].getHandedness() = Handedness::RIGHT;
+                hands[0].getHandedness() = Handedness::RIGHT;
             }
-            handCallback(&landmarks[0]);
+            handCallback(&hands[0]);
         }
     }
 
-    UMP_API UMediapipe::UMediapipe(HandLandmarksCallback handCallbackParam, unsigned int frameWidth, unsigned int frameHeight) :
+    UMP_API UMediapipe::UMediapipe(HandDetectionCallback handCallbackParam, unsigned int frameWidth, unsigned int frameHeight) :
             frameWidth(frameWidth), frameHeight(frameHeight) {
         handCallback = handCallbackParam;
     }
 
     UMP_API UMediapipe::~UMediapipe() {
-        stopLandmarkDetection();
+        stopHandDetection();
         handCallback = nullptr;
     }
 
@@ -84,7 +100,7 @@ namespace ump {
         graph->RecognizeAsync(input, frame_timestamp_us);
     }
 
-    UMP_API void UMediapipe::beginLandmarkDetection() {
+    UMP_API void UMediapipe::beginHandDetection() {
         auto options = std::make_unique<GestureRecognizerOptions>();
         options->running_mode = mediapipe::tasks::vision::core::RunningMode::LIVE_STREAM;
         options->num_hands = 2;
@@ -106,7 +122,7 @@ namespace ump {
         }
     }
 
-    UMP_API void UMediapipe::stopLandmarkDetection() {
+    UMP_API void UMediapipe::stopHandDetection() {
         if (graph) {
             graph->Close();
         }

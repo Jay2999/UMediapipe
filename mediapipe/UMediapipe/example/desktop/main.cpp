@@ -12,19 +12,19 @@ ump::UMediapipe* _ump = nullptr;
 
 BOOL WINAPI consoleHandler(DWORD signal) {
     if (signal == CTRL_C_EVENT) {
-        _ump->stopLandmarkDetection();
+        _ump->stopHandDetection();
     }
     return TRUE;
 }
 
-void onLandmarkReceived(ump::HandLandmarks* landmarks) {
-    std::cout << (*landmarks)[0].x() << std::endl;
+void onLandmarkReceived(ump::HandDetectionResult* hand) {
+    std::cout << hand->Landmarks(0).x() << std::endl;
 }
 
 int main() {
     SetConsoleCtrlHandler(consoleHandler, TRUE);
-    _ump = new ump::UMediapipe(onLandmarkReceived, nullptr, 640, 480);
-    _ump->beginLandmarkDetection();
+    _ump = new ump::UMediapipe(onLandmarkReceived, 640, 480);
+    _ump->beginHandDetection();
 
     Mat frame;
     VideoCapture cap;
@@ -55,6 +55,6 @@ int main() {
         if (waitKey(5) >= 0)
             break;
     }
-    _ump->stopLandmarkDetection();
+    _ump->stopHandDetection();
     return 0;
 }

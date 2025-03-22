@@ -8,10 +8,10 @@ namespace ump {
         unsigned frameWidth;
         unsigned frameHeight;
     public:
-        UMediapipe(HandLandmarksCallback handCallback, unsigned frameWidth, unsigned frameHeight);
+        UMediapipe(HandDetectionCallback handCallback, unsigned frameWidth, unsigned frameHeight);
         void sendFrame(unsigned char *data);
-        void beginLandmarkDetection();
-        void stopLandmarkDetection();
+        void beginHandDetection();
+        void stopHandDetection();
         ~UMediapipe();
     };
 }
