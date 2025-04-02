@@ -8,6 +8,15 @@
 #include "ThirdParty/libHandyVR/include/UMediapipe.h"
 #include "ExampleActor.generated.h"
 
+UENUM(BlueprintType)
+enum HandGestures
+{
+	NONE,
+	OPEN_PALM,
+	CLOSED_FIST
+};
+
+
 UCLASS()
 class HANDYVR_API AExampleActor : public AActor
 {
@@ -31,6 +40,12 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	FTransform pollTransformRight() const;
+
+	UFUNCTION(BlueprintCallable)
+	HandGestures pollGestureLeft() const;
+
+	UFUNCTION(BlueprintCallable)
+	HandGestures pollGestureRight() const;
 
 private:
 	uint32 cameraWidth;

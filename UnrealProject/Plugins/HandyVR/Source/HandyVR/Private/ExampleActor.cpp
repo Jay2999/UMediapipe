@@ -23,7 +23,7 @@ static float approxDepth(const ump::HandLandmarks& landmarks) {
 	auto v2 = toUSpace(landmarks[17]) - l0;
 	float a = v1.Size() + v2.Size();
 #if ANDROID
-	a = 2.5 - a;
+	a = 2.3 - a;
 #endif
 	aa = 2 * a;
 	return a * 2;
@@ -35,9 +35,18 @@ struct HandTransform {
 	FVector r = FVector(0, 1, 0);
 	FVector u = FVector(0, 0, 1);
 };
-HandTransform left, right;
 
+TMap<ump::HandGestures, FString> gestureNames{
+	{ump::NONE, "None"},
+	{ump::CLOSED_FIST, "Fist"},
+	{ump::OPEN_PALM, "Palm"}
+};
+
+HandTransform left, right;
 FString label;
+ump::HandGestures currGesture_l = ump::HandGestures::NONE;
+ump::HandGestures currGesture_r = ump::HandGestures::NONE;
+
 static void handCallback(ump::HandDetectionResult* hand) {
 	ump::HandDetectionResult& r = *hand;
 	label = r.getHandedness() == ump::Handedness::LEFT ? "left" : "right";
@@ -45,7 +54,9 @@ static void handCallback(ump::HandDetectionResult* hand) {
 
 	auto l0 = toUSpace(r.Landmarks(0));
 	target.location = l0;
-	target.location.X = approxDepth(r.Landmarks());
+	float depth = approxDepth(r.Landmarks());
+	target.location *= (depth / 2 + 3) / 4;
+	target.location.X = depth;
 
 	auto v1 = toUSpace(r.Landmarks(5)) - l0;
 	auto v2 = toUSpace(r.Landmarks(17)) - l0;
@@ -61,6 +72,13 @@ static void handCallback(ump::HandDetectionResult* hand) {
 	target.f.Normalize();
 
 	target.r = FVector::CrossProduct(target.f, target.u);
+
+	if (r.getHandedness() == ump::LEFT && r.Gesture() != currGesture_l) {
+		currGesture_l = r.Gesture();
+	}
+	else if (r.getHandedness() == ump::RIGHT && r.Gesture() != currGesture_r) {
+		currGesture_r = r.Gesture();
+	}
 }
 
 // Sets default values
@@ -134,9 +152,9 @@ void AExampleActor::Tick(float DeltaTime)
 		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString(text), true, FVector2D(-3, 3));
 		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("X = %f"), lx), true, FVector2D(6, -6));
 #if WINDOWS
-		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, label, true);
+		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, label, true);
 #else
-		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("X = %f"), aa), true, FVector2D(6, -6));
+		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("X = %f"), aa), true, FVector2D(6, -6));
 #endif
 		//UE_LOG(LogTemp, Log, TEXT("X = %f"), lx);
 		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("P = %d"), pixels[0].R), true);
@@ -151,4 +169,14 @@ FTransform AExampleActor::pollTransformLeft() const
 FTransform AExampleActor::pollTransformRight() const
 {
 	return FTransform(right.r, right.f, right.u, right.location);
+}
+
+HandGestures AExampleActor::pollGestureLeft() const
+{
+	return (HandGestures)currGesture_l;
+}
+
+HandGestures AExampleActor::pollGestureRight() const
+{
+	return (HandGestures)currGesture_r;
 }
