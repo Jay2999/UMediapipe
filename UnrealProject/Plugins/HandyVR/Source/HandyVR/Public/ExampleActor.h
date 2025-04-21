@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Engine/TextureRenderTarget2D.h"
-#include "ThirdParty/libHandyVR/include/UMediapipe.h"
+#include "UMediapipe.h"
 #include "ExampleActor.generated.h"
 
 UENUM(BlueprintType)

@@ -18,7 +18,9 @@ public class HandyVR : ModuleRules
 		PrivateIncludePaths.AddRange(
 			new string[] {
 				// ... add other private include paths required here ...
-			}
+				"/Engine/Source/Runtime/MediaAssets/Public",
+                "ThirdParty/libHandyVR/include"
+            }
 			);
 			
 		
@@ -38,6 +40,8 @@ public class HandyVR : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"MediaAssets",
+				"RenderCore",
 				"libHandyVR",
 			}
 			);
