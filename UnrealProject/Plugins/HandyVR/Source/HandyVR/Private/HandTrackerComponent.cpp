@@ -6,11 +6,19 @@
 #include "MediaPlayer.h"
 #include "HandData.hpp"
 
-int cnt = 0;
+TArray<HandData> left;
+TArray<HandData> right;
+
 static void handCallback(ump::HandDetectionResult* hand) {
-	++cnt;
-	auto data = toHandData(*hand);
-	UE_LOG(LogTemp, Warning, TEXT("X = %f"), data.transform.GetLocation().X);
+	auto handData = toHandData(*hand);
+	if (handData.handedness == Handedness::LEFT) {
+		left.Add(MoveTemp(handData));
+		if (left.Num() > 5) left.RemoveAt(0);
+	}
+	else {
+		right.Add(MoveTemp(handData));
+		if (right.Num() > 5) right.RemoveAt(0);
+	}
 }
 
 CameraFrame::CameraFrame(TArray<FColor>&& pixels) : pixels(std::move(pixels))
@@ -51,14 +59,10 @@ UHandTrackerComponent::~UHandTrackerComponent()
 	}
 }
 
-float _time = 0;
-
 // Called when the game starts
 void UHandTrackerComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	cnt = 0;
-	_time = 0;
 	mediaTexture->GetMediaPlayer()->OnPlaybackResumed.AddDynamic(this, &UHandTrackerComponent::OnPlayingVideo);
 	if (stripAlphaChannel) {
 		rgbArray = new uint8_t[targetCameraWidth * targetCameraHeight * 3];
@@ -108,21 +112,40 @@ void UHandTrackerComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 			_ump->sendFrame((uint8_t*)frame.getPixels().GetData());
 		}
 	}
+}
 
-	if (GEngine) {
-		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("Number is %d"), n), true, FVector2D(-3, 3));
-		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Green, FString(text), true, FVector2D(-3, 3));
-		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("X = %f"), lx), true, FVector2D(6, -6));
-#if WINDOWS
-		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, label, true);
-		_time += DeltaTime;
-		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("X = %f"), cnt / _time), true);
-#else
-		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("X = %f"), aa), true, FVector2D(6, -6));
-#endif
-		//UE_LOG(LogTemp, Log, TEXT("X = %f"), lx);
-		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("P = %d"), pixels[0].R), true);
+HandData UHandTrackerComponent::pollHandDataLeft() const
+{
+	if (left.Num() == 0) return HandData();
+	FVector loc = left[0].transform.GetLocation();
+	FQuat rot = left[0].transform.GetRotation();
+	int numElems = left.Num() - 2;
+	float ratio = 1.0f / numElems;
+	for (int i = 1; i < left.Num() - 1; ++i) {
+		loc = FMath::Lerp<FVector, float>(loc, left[i].transform.GetLocation(), ratio);
+		rot = FQuat::Slerp(rot, left[i].transform.GetRotation(), ratio);
 	}
+	HandData data;
+	data.transform = FTransform(rot, loc, FVector(1, 1, 1));
+	data.handedness = Handedness::LEFT;
+	return data;
+}
+
+HandData UHandTrackerComponent::pollHandDataRight() const
+{
+	if (right.Num() == 0) return HandData();
+	FVector loc = right[0].transform.GetLocation();
+	FQuat rot = right[0].transform.GetRotation();
+	int numElems = right.Num() - 2;
+	float ratio = 1.0f / numElems;
+	for (int i = 1; i < right.Num() - 1; ++i) {
+		loc = FMath::Lerp<FVector, float>(loc, right[i].transform.GetLocation(), ratio);
+		rot = FQuat::Slerp(rot, right[i].transform.GetRotation(), ratio);
+	}
+	HandData data;
+	data.transform = FTransform(rot, loc, FVector(1, 1, 1));
+	data.handedness = Handedness::RIGHT;
+	return data;
 }
 
 void UHandTrackerComponent::OnPlayingVideo()

@@ -37,14 +37,13 @@ static HandData toHandData(const ump::HandDetectionResult& hand) {
 	handData.handedness = hand.getHandedness() == ump::Handedness::LEFT ? Handedness::LEFT : Handedness::RIGHT;
 
 	auto l0 = toUSpace(hand.Landmarks(0));
-	handData.transform.SetLocation(l0);
 #if APPROX_DEPTH
+	auto location = l0;
 	float depth = approxDepth(hand.Landmarks());
-	handData.transform.SetLocation(handData.transform.GetLocation() * (depth / 2 + 3) / 4);
-	l0 = handData.transform.GetLocation();
-	l0.X = depth;
-	handData.transform.SetLocation(l0);
+	location *= (depth / 2 + 3) / 4;
+	location.X = depth;
 #endif
+	location *= 50;
 
 	auto v1 = toUSpace(hand.Landmarks(5)) - l0;
 	auto v2 = toUSpace(hand.Landmarks(17)) - l0;
@@ -60,9 +59,8 @@ static HandData toHandData(const ump::HandDetectionResult& hand) {
 	f.Normalize();
 
 	auto r = FVector::CrossProduct(f, u);
-
-	FMatrix rotMatrix(f, r, u, FPlane(0, 0, 0, 0));
-	handData.transform.SetRotation(FQuat(rotMatrix));
+	handData.transform = FTransform(r, f, u, location);
+	//handData.transform = FTransform(r, f, u, FVector(50, 0, 0));
 
 	return handData;
 }

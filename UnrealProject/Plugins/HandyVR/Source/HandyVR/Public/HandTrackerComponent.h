@@ -7,6 +7,7 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "MediaTexture.h"
 #include "UMediapipe.h"
+#include "HandData.hpp"
 #include "Containers/CircularQueue.h"
 #include "HandTrackerComponent.generated.h"
 
@@ -20,7 +21,7 @@ public:
 	inline bool operator==(const CameraFrame& other) const { return hash == other.hash; }
 };
 
-UCLASS(Blueprintable, BlueprintType, meta = (BlueprintSpawnableComponent))
+UCLASS(Blueprintable, BlueprintType, ClassGroup = (HandyVR), meta = (BlueprintSpawnableComponent))
 class HANDYVR_API UHandTrackerComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -46,6 +47,10 @@ public:
 
 	UPROPERTY(EditDefaultsOnly)
 	bool stripAlphaChannel = true;
+
+	HandData pollHandDataLeft() const;
+
+	HandData pollHandDataRight() const;
 
 private:
 	UPROPERTY()

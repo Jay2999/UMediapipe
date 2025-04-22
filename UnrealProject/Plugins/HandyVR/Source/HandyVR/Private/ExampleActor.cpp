@@ -4,7 +4,7 @@
 #include "ExampleActor.h"
 #include "Components/StaticMeshComponent.h"
 #include <Kismet/KismetRenderingLibrary.h>
-
+/*
 static FVector toUSpace(const ump::Landmark& landmark) {
 #if WINDOWS
 	float y = 1 - landmark.x() * 2;
@@ -80,6 +80,7 @@ static void handCallback(ump::HandDetectionResult* hand) {
 		currGesture_r = r.Gesture();
 	}
 }
+*/
 
 // Sets default values
 AExampleActor::AExampleActor()
@@ -98,7 +99,7 @@ AExampleActor::AExampleActor()
 	cameraHeight = 480;
 	pixels.AddUninitialized(cameraWidth * cameraHeight);
 	rgbArray = new unsigned char[cameraWidth * cameraHeight * 3];
-	_ump = new ump::UMediapipe(handCallback, cameraWidth, cameraHeight);
+	//_ump = new ump::UMediapipe(handCallback, cameraWidth, cameraHeight);
 }
 
 AExampleActor::~AExampleActor()
@@ -163,20 +164,24 @@ void AExampleActor::Tick(float DeltaTime)
 
 FTransform AExampleActor::pollTransformLeft() const
 {
-	return FTransform(left.r, left.f, left.u, left.location);
+	//return FTransform(left.r, left.f, left.u, left.location);
+	return FTransform();
 }
 
 FTransform AExampleActor::pollTransformRight() const
 {
-	return FTransform(right.r, right.f, right.u, right.location);
+	//return FTransform(right.r, right.f, right.u, right.location);
+	return FTransform();
 }
 
 HandGestures AExampleActor::pollGestureLeft() const
 {
-	return (HandGestures)currGesture_l;
+	//return (HandGestures)currGesture_l;
+	return HandGestures::NONE;
 }
 
 HandGestures AExampleActor::pollGestureRight() const
 {
-	return (HandGestures)currGesture_r;
+	//return (HandGestures)currGesture_r;
+	return HandGestures::NONE;
 }
