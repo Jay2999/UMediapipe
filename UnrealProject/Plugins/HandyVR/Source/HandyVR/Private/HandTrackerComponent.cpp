@@ -4,10 +4,13 @@
 #include "HandTrackerComponent.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "MediaPlayer.h"
+#include "HandData.hpp"
 
-float lx = 0;
+int cnt = 0;
 static void handCallback(ump::HandDetectionResult* hand) {
-	lx = hand->Landmarks()[0].x();
+	++cnt;
+	auto data = toHandData(*hand);
+	UE_LOG(LogTemp, Warning, TEXT("X = %f"), data.transform.GetLocation().X);
 }
 
 CameraFrame::CameraFrame(TArray<FColor>&& pixels) : pixels(std::move(pixels))
@@ -20,7 +23,6 @@ CameraFrame::CameraFrame(TArray<FColor>&& pixels) : pixels(std::move(pixels))
 	}
 }
 
-// Sets default values for this component's properties
 UHandTrackerComponent::UHandTrackerComponent() : frames(new TCircularQueue<CameraFrame>(3))
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -49,15 +51,19 @@ UHandTrackerComponent::~UHandTrackerComponent()
 	}
 }
 
+float _time = 0;
+
 // Called when the game starts
 void UHandTrackerComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	cnt = 0;
+	_time = 0;
 	mediaTexture->GetMediaPlayer()->OnPlaybackResumed.AddDynamic(this, &UHandTrackerComponent::OnPlayingVideo);
 	if (stripAlphaChannel) {
 		rgbArray = new uint8_t[targetCameraWidth * targetCameraHeight * 3];
 	}
-	_ump = new ump::UMediapipe(handCallback, targetCameraWidth, targetCameraHeight);
+	_ump = MakeUnique<ump::UMediapipe>(handCallback, targetCameraWidth, targetCameraHeight);
 	_ump->beginHandDetection();
 }
 
@@ -109,7 +115,8 @@ void UHandTrackerComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("X = %f"), lx), true, FVector2D(6, -6));
 #if WINDOWS
 		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, label, true);
-		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("X = %f"), lx), true);
+		_time += DeltaTime;
+		GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("X = %f"), cnt / _time), true);
 #else
 		//GEngine->AddOnScreenDebugMessage(-1, DeltaTime, FColor::Red, FString::Printf(TEXT("X = %f"), aa), true, FVector2D(6, -6));
 #endif

@@ -61,7 +61,7 @@ private:
 
 	uint8_t* rgbArray = nullptr;
 
-	ump::UMediapipe* _ump = nullptr;
+	TUniquePtr<ump::UMediapipe> _ump = nullptr;
 
 	UFUNCTION()
 	void OnPlayingVideo();

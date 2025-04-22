@@ -6,16 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "UMediapipe.h"
+#include "HandEnumLibrary.h"
 #include "ExampleActor.generated.h"
-
-UENUM(BlueprintType)
-enum HandGestures
-{
-	NONE,
-	OPEN_PALM,
-	CLOSED_FIST
-};
-
 
 UCLASS()
 class HANDYVR_API AExampleActor : public AActor
