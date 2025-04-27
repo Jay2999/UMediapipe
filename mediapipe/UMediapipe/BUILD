@@ -84,13 +84,9 @@ cc_library(
     ],
     deps = [
         "//mediapipe/tasks/cc/vision/gesture_recognizer:gesture_recognizer",
+        "//mediapipe/framework/port:opencv_calib3d",
     ],
     alwayslink = True,
-)
-
-config_setting(
-    name = "arm_build",
-    values = {"cpu": "arm64-v8a"},
 )
 
 cc_binary(

@@ -31,4 +31,6 @@ public:
 
 	UPROPERTY(EditDefaultsOnly)
 	TEnumAsByte<Handedness> laterality = Handedness::LEFT;
+
+
 };

@@ -21,6 +21,8 @@ public:
 	inline bool operator==(const CameraFrame& other) const { return hash == other.hash; }
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHandGestureEvent, HandGestures, Gesture);
+
 UCLASS(Blueprintable, BlueprintType, ClassGroup = (HandyVR), meta = (BlueprintSpawnableComponent))
 class HANDYVR_API UHandTrackerComponent : public UActorComponent
 {
@@ -52,6 +54,12 @@ public:
 
 	HandData pollHandDataRight() const;
 
+	UPROPERTY(BlueprintAssignable)
+	FHandGestureEvent LeftHandGestureEvent;
+
+	UPROPERTY(BlueprintAssignable)
+	FHandGestureEvent RightHandGestureEvent;
+
 private:
 	UPROPERTY()
 	UMediaTexture* mediaTexture = nullptr;
@@ -70,4 +78,6 @@ private:
 
 	UFUNCTION()
 	void OnPlayingVideo();
+
+	void processCameraFrame();
 };

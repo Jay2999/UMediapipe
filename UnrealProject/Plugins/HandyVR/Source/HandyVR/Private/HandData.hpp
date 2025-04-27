@@ -8,17 +8,29 @@
 struct HandData {
 	FTransform transform;
 	Handedness handedness;
+	HandGestures gesture;
 };
 
 static inline FVector toUSpace(const ump::Landmark& landmark) {
+#if APPROX_DEPTH
 #if WINDOWS
+	float x = -2 * landmark.z();
 	float y = 1 - landmark.x() * 2;
-	float x = 1 - 2 * landmark.z();
 #else
+	float x = 2 * landmark.z();
 	float y = landmark.x() * 2 - 1;
-	float x = 2 * landmark.z() - 1;
 #endif
 	return FVector(x, y, 1 - 2 * landmark.y());
+#else
+#if WINDOWS
+	float x = -2 * landmark.z();
+	float y = -landmark.x() * 2;
+#else
+	float x = 2 * landmark.z();
+	float y = landmark.x() * 2;
+#endif
+	return FVector(x, y, -2 * landmark.y());
+#endif
 }
 
 static float approxDepth(const ump::HandLandmarks& landmarks) {
@@ -35,13 +47,16 @@ static float approxDepth(const ump::HandLandmarks& landmarks) {
 static HandData toHandData(const ump::HandDetectionResult& hand) {
 	HandData handData;
 	handData.handedness = hand.getHandedness() == ump::Handedness::LEFT ? Handedness::LEFT : Handedness::RIGHT;
+	handData.gesture = (HandGestures)hand.Gesture();
 
 	auto l0 = toUSpace(hand.Landmarks(0));
-#if APPROX_DEPTH
 	auto location = l0;
+#if APPROX_DEPTH
 	float depth = approxDepth(hand.Landmarks());
 	location *= (depth / 2 + 3) / 4;
 	location.X = depth;
+#else
+	location.X += 3;
 #endif
 	location *= 50;
 

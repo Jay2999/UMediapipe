@@ -64,53 +64,18 @@ void UHandTrackerComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	mediaTexture->GetMediaPlayer()->OnPlaybackResumed.AddDynamic(this, &UHandTrackerComponent::OnPlayingVideo);
-	if (stripAlphaChannel) {
-		rgbArray = new uint8_t[targetCameraWidth * targetCameraHeight * 3];
-	}
-	_ump = MakeUnique<ump::UMediapipe>(handCallback, targetCameraWidth, targetCameraHeight);
-	_ump->beginHandDetection();
 }
 
 void UHandTrackerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	if (!cameraTextureRT) return;
-	UKismetRenderingLibrary::DrawMaterialToRenderTarget(this, cameraTextureRT, cameraTextureMaterial);
+	processCameraFrame();
 
-	/*ENQUEUE_RENDER_COMMAND(ReadCameraTexture)(
-		[this](FRHICommandListImmediate& RHICmdList) {
-			auto* rt = cameraTextureRT->GetRenderTargetResource();*/
-			auto* rt = cameraTextureRT->GameThread_GetRenderTargetResource();
-			if (rt) {
-				TArray<FColor> pixels;
-				pixels.AddUninitialized(targetCameraHeight * targetCameraWidth);
-				if (rt->ReadPixels(pixels)) {
-					CameraFrame frame(std::move(pixels));
-					const auto oldFrame = frames->Peek();
-					if (!oldFrame || !(frame == *oldFrame)) {
-						frames->Enqueue(std::move(frame));
-					}
-				}
-			}
-		//}
-	//);
-
-	CameraFrame frame;
-	bool hasFrame = frames->Dequeue(frame);
-	if (hasFrame) {
-		if (stripAlphaChannel) {
-			int it = 0;
-			for (int i = 0; i < frame.getPixels().Num(); ++i) {
-				rgbArray[it++] = frame.getPixels()[i].R;
-				rgbArray[it++] = frame.getPixels()[i].G;
-				rgbArray[it++] = frame.getPixels()[i].B;
-			}
-			_ump->sendFrame(rgbArray);
-		}
-		else
-		{
-			_ump->sendFrame((uint8_t*)frame.getPixels().GetData());
-		}
+	if (left.Num() > 3 && left[0].gesture == left[1].gesture && left[2].gesture == left[3].gesture && left[1].gesture != left[2].gesture) {
+		LeftHandGestureEvent.Broadcast(left[2].gesture);
+	}
+	if (right.Num() > 3 && right[0].gesture == right[1].gesture && right[2].gesture == right[3].gesture && right[1].gesture != right[2].gesture) {
+		RightHandGestureEvent.Broadcast(right[2].gesture);
 	}
 }
 
@@ -158,4 +123,51 @@ void UHandTrackerComponent::OnPlayingVideo()
 		targetCameraHeight = dims.Y;
 	}
 	cameraTextureRT = UKismetRenderingLibrary::CreateRenderTarget2D(this, targetCameraWidth, targetCameraHeight, RTF_RGBA8);
+	if (stripAlphaChannel) {
+		rgbArray = new uint8_t[targetCameraWidth * targetCameraHeight * 3];
+	}
+	_ump = MakeUnique<ump::UMediapipe>(handCallback, targetCameraWidth, targetCameraHeight);
+	_ump->beginHandDetection();
+}
+
+void UHandTrackerComponent::processCameraFrame()
+{
+	if (!cameraTextureRT) return;
+	UKismetRenderingLibrary::DrawMaterialToRenderTarget(this, cameraTextureRT, cameraTextureMaterial);
+
+	/*ENQUEUE_RENDER_COMMAND(ReadCameraTexture)(
+		[this](FRHICommandListImmediate& RHICmdList) {
+			auto* rt = cameraTextureRT->GetRenderTargetResource();*/
+	auto* rt = cameraTextureRT->GameThread_GetRenderTargetResource();
+	if (rt) {
+		TArray<FColor> pixels;
+		pixels.AddUninitialized(targetCameraHeight * targetCameraWidth);
+		if (rt->ReadPixels(pixels)) {
+			CameraFrame frame(std::move(pixels));
+			const auto oldFrame = frames->Peek();
+			if (!oldFrame || !(frame == *oldFrame)) {
+				frames->Enqueue(std::move(frame));
+			}
+		}
+	}
+	//}
+//);
+
+	CameraFrame frame;
+	bool hasFrame = frames->Dequeue(frame);
+	if (hasFrame) {
+		if (stripAlphaChannel) {
+			int it = 0;
+			for (int i = 0; i < frame.getPixels().Num(); ++i) {
+				rgbArray[it++] = frame.getPixels()[i].R;
+				rgbArray[it++] = frame.getPixels()[i].G;
+				rgbArray[it++] = frame.getPixels()[i].B;
+			}
+			_ump->sendFrame(rgbArray);
+		}
+		else
+		{
+			_ump->sendFrame((uint8_t*)frame.getPixels().GetData());
+		}
+	}
 }
