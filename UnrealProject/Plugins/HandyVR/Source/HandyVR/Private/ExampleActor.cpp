@@ -90,7 +90,7 @@ AExampleActor::AExampleActor()
 
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 
-	static ConstructorHelpers::FObjectFinder<UMaterial> MaterialFinder(TEXT("/HandyVR/CameraTextureMaterial.CameraTextureMaterial"));
+	static ConstructorHelpers::FObjectFinder<UMaterial> MaterialFinder(TEXT("/HandyVR/Camera/CameraTextureMaterial.CameraTextureMaterial"));
 	if (MaterialFinder.Succeeded()) {
 		cameraTextureMaterial = MaterialFinder.Object;
 	}
