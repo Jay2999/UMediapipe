@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Components/SceneComponent.h"
-#include "HandEnumLibrary.h"
+#include "HandData.hpp"
 #include "HandControlledComponent.generated.h"
 
-class UHandTrackerComponent;
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHandGestureEvent, HandGestures, Gesture);
 
 UCLASS(Blueprintable, BlueprintType, ClassGroup = (HandyVR), meta = (BlueprintSpawnableComponent))
 class HANDYVR_API UHandControlledComponent : public USceneComponent
@@ -22,8 +22,7 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-	UPROPERTY()
-	UHandTrackerComponent* tracker;
+	TArray<HandData> handData;
 
 public:
 	// Called every frame
@@ -32,5 +31,11 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TEnumAsByte<Handedness> laterality = Handedness::LEFT;
 
+	UPROPERTY(BlueprintAssignable)
+	FHandGestureEvent OnHandGestureEvent;
 
+	inline void pushHandData(HandData&& data) {
+		handData.Add(MoveTemp(data));
+		if (handData.Num() > 5) handData.RemoveAt(0);
+	}
 };

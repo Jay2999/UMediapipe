@@ -5,19 +5,25 @@
 #include "Kismet/KismetRenderingLibrary.h"
 #include "MediaPlayer.h"
 #include "HandData.hpp"
+#include "HandControlledComponent.h"
 
 TArray<HandData> left;
 TArray<HandData> right;
 
+TArray<UHandControlledComponent*>* leftControlledCtx = nullptr;
+TArray<UHandControlledComponent*>* rightControlledCtx = nullptr;
+
 static void handCallback(ump::HandDetectionResult* hand) {
 	auto handData = toHandData(*hand);
-	if (handData.handedness == Handedness::LEFT) {
-		left.Add(MoveTemp(handData));
-		if (left.Num() > 5) left.RemoveAt(0);
+	if (handData.handedness == Handedness::LEFT && leftControlledCtx) {
+		for (auto& comps : *leftControlledCtx) {
+			comps->pushHandData(MoveTemp(handData));
+		}
 	}
-	else {
-		right.Add(MoveTemp(handData));
-		if (right.Num() > 5) right.RemoveAt(0);
+	else if (rightControlledCtx) {
+		for (auto& comps : *rightControlledCtx) {
+			comps->pushHandData(MoveTemp(handData));
+		}
 	}
 }
 
@@ -49,6 +55,8 @@ UHandTrackerComponent::UHandTrackerComponent() : frames(new TCircularQueue<Camer
 	else {
 		UE_LOG(LogTemp, Error, TEXT("Could not find DefaultMediaTexture."));
 	}
+	leftControlledCtx = &leftHandControlledComponents;
+	rightControlledCtx = &rightHandControlledComponents;
 }
 
 UHandTrackerComponent::~UHandTrackerComponent()
@@ -57,6 +65,8 @@ UHandTrackerComponent::~UHandTrackerComponent()
 		delete[] rgbArray;
 		rgbArray = nullptr;
 	}
+	leftControlledCtx = nullptr;
+	rightControlledCtx = nullptr;
 }
 
 // Called when the game starts
@@ -64,53 +74,25 @@ void UHandTrackerComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	mediaTexture->GetMediaPlayer()->OnPlaybackResumed.AddDynamic(this, &UHandTrackerComponent::OnPlayingVideo);
+
+	auto actor = GetOwner();
+	if (actor) {
+		TInlineComponentArray<UHandControlledComponent*> controlledComponents(actor, true);
+		for (const auto& comp : controlledComponents) {
+			if (comp->laterality == Handedness::LEFT) {
+				leftHandControlledComponents.Add(comp);
+			}
+			else {
+				rightHandControlledComponents.Add(comp);
+			}
+		}
+	}
 }
 
 void UHandTrackerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	processCameraFrame();
-
-	if (left.Num() > 3 && left[0].gesture == left[1].gesture && left[2].gesture == left[3].gesture && left[1].gesture != left[2].gesture) {
-		LeftHandGestureEvent.Broadcast(left[2].gesture);
-	}
-	if (right.Num() > 3 && right[0].gesture == right[1].gesture && right[2].gesture == right[3].gesture && right[1].gesture != right[2].gesture) {
-		RightHandGestureEvent.Broadcast(right[2].gesture);
-	}
-}
-
-HandData UHandTrackerComponent::pollHandDataLeft() const
-{
-	if (left.Num() == 0) return HandData();
-	FVector loc = left[0].transform.GetLocation();
-	FQuat rot = left[0].transform.GetRotation();
-	int numElems = left.Num() - 2;
-	float ratio = 1.0f / numElems;
-	for (int i = 1; i < left.Num() - 1; ++i) {
-		loc = FMath::Lerp<FVector, float>(loc, left[i].transform.GetLocation(), ratio);
-		rot = FQuat::Slerp(rot, left[i].transform.GetRotation(), ratio);
-	}
-	HandData data;
-	data.transform = FTransform(rot, loc, FVector(1, 1, 1));
-	data.handedness = Handedness::LEFT;
-	return data;
-}
-
-HandData UHandTrackerComponent::pollHandDataRight() const
-{
-	if (right.Num() == 0) return HandData();
-	FVector loc = right[0].transform.GetLocation();
-	FQuat rot = right[0].transform.GetRotation();
-	int numElems = right.Num() - 2;
-	float ratio = 1.0f / numElems;
-	for (int i = 1; i < right.Num() - 1; ++i) {
-		loc = FMath::Lerp<FVector, float>(loc, right[i].transform.GetLocation(), ratio);
-		rot = FQuat::Slerp(rot, right[i].transform.GetRotation(), ratio);
-	}
-	HandData data;
-	data.transform = FTransform(rot, loc, FVector(1, 1, 1));
-	data.handedness = Handedness::RIGHT;
-	return data;
 }
 
 void UHandTrackerComponent::OnPlayingVideo()

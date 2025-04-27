@@ -1,7 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "HandControlledComponent.h"
-#include "HandTrackerComponent.h"
 
 UHandControlledComponent::UHandControlledComponent()
 {
@@ -12,23 +11,31 @@ UHandControlledComponent::UHandControlledComponent()
 void UHandControlledComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	auto actor = GetOwner();
-	if (actor) {
-		auto _tracker = actor->FindComponentByClass<UHandTrackerComponent>();
-		if (_tracker) {
-			this->tracker = _tracker;
-		}
-		else {
-			UE_LOG(LogTemp, Warning, TEXT("Could not find HandTrackerComponent in this actor."));
-		}
-	}
 }
 
 void UHandControlledComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	if (tracker) {
-		HandData handData = laterality == Handedness::LEFT ? tracker->pollHandDataLeft() : tracker->pollHandDataRight();
-		SetRelativeTransform(handData.transform);
+
+	if (handData.Num() == 0) return;
+	FVector loc = handData[0].transform.GetLocation();
+	FQuat rot = handData[0].transform.GetRotation();
+	int numElems = handData.Num() - 2;
+	float ratio = 1.0f / numElems;
+	for (int i = 1; i < handData.Num() - 1; ++i) {
+		loc = FMath::Lerp<FVector, float>(loc, handData[i].transform.GetLocation(), ratio);
+		rot = FQuat::Slerp(rot, handData[i].transform.GetRotation(), ratio);
+	}
+	HandData data;
+	data.transform = FTransform(rot, loc, FVector(1, 1, 1));
+	data.handedness = Handedness::LEFT;
+	SetRelativeTransform(data.transform);
+
+	if (handData.Num() > 3 &&
+		handData[0].gesture == handData[1].gesture &&
+		handData[2].gesture == handData[3].gesture &&
+		handData[1].gesture != handData[2].gesture)
+	{
+		OnHandGestureEvent.Broadcast(handData[2].gesture);
 	}
 }

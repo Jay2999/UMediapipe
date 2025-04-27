@@ -9,7 +9,10 @@
 #include "UMediapipe.h"
 #include "HandData.hpp"
 #include "Containers/CircularQueue.h"
+#include <functional>
 #include "HandTrackerComponent.generated.h"
+
+class UHandControlledComponent;
 
 class CameraFrame {
 	TArray<FColor> pixels;
@@ -20,8 +23,6 @@ public:
 	inline const TArray<FColor>& getPixels() const { return pixels; }
 	inline bool operator==(const CameraFrame& other) const { return hash == other.hash; }
 };
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHandGestureEvent, HandGestures, Gesture);
 
 UCLASS(Blueprintable, BlueprintType, ClassGroup = (HandyVR), meta = (BlueprintSpawnableComponent))
 class HANDYVR_API UHandTrackerComponent : public UActorComponent
@@ -50,16 +51,6 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	bool stripAlphaChannel = true;
 
-	HandData pollHandDataLeft() const;
-
-	HandData pollHandDataRight() const;
-
-	UPROPERTY(BlueprintAssignable)
-	FHandGestureEvent LeftHandGestureEvent;
-
-	UPROPERTY(BlueprintAssignable)
-	FHandGestureEvent RightHandGestureEvent;
-
 private:
 	UPROPERTY()
 	UMediaTexture* mediaTexture = nullptr;
@@ -70,14 +61,17 @@ private:
 	UPROPERTY()
 	UMaterial* cameraTextureMaterial = nullptr;
 
+	UFUNCTION()
+	void OnPlayingVideo();
+
 	TUniquePtr<TCircularQueue<CameraFrame>> frames = nullptr;
 
 	uint8_t* rgbArray = nullptr;
 
 	TUniquePtr<ump::UMediapipe> _ump = nullptr;
 
-	UFUNCTION()
-	void OnPlayingVideo();
-
 	void processCameraFrame();
+
+	TArray<UHandControlledComponent*> leftHandControlledComponents;
+	TArray<UHandControlledComponent*> rightHandControlledComponents;
 };
