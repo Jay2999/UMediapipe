@@ -7,11 +7,8 @@
 #include "HandData.hpp"
 #include "HandControlledComponent.h"
 
-TArray<HandData> left;
-TArray<HandData> right;
-
-TArray<UHandControlledComponent*>* leftControlledCtx = nullptr;
-TArray<UHandControlledComponent*>* rightControlledCtx = nullptr;
+static TArray<UHandControlledComponent*>* leftControlledCtx = nullptr;
+static TArray<UHandControlledComponent*>* rightControlledCtx = nullptr;
 
 static void handCallback(ump::HandDetectionResult* hand) {
 	auto handData = toHandData(*hand);
