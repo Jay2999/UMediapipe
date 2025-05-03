@@ -17,36 +17,38 @@ void UHandControlledComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (handData.Num() == 0) return;
-	FVector loc = handData[0].transform.GetLocation();
-	FQuat rot = handData[0].transform.GetRotation();
-	int numElems = handData.Num() - 2;
+	int firstIndex = writeIndex;
+	for (int i = 0; i < 3; ++i) firstIndex = handData.GetNextIndex(firstIndex);
+	FVector loc = handData[firstIndex].transform.GetLocation();
+	FQuat rot = handData[firstIndex].transform.GetRotation();
+
+	int numElems = 4;
 	float ratio = 1.0f / numElems;
-	for (int i = 1; i < handData.Num() - 1; ++i) {
+	for (int i = handData.GetNextIndex(firstIndex); handData.GetNextIndex(i) != writeIndex; i = handData.GetNextIndex(i)) {
 		loc = FMath::Lerp<FVector, float>(loc, handData[i].transform.GetLocation(), ratio);
 		rot = FQuat::Slerp(rot, handData[i].transform.GetRotation(), ratio);
 	}
 	SetRelativeTransform(FTransform(rot, loc, FVector(1, 1, 1)));
 
-	if (handData.Num() > 3 &&
-		handData[0].gesture == handData[1].gesture &&
-		handData[2].gesture == handData[3].gesture &&
-		handData[1].gesture != handData[2].gesture)
+	int prev0 = handData.GetPreviousIndex(writeIndex);
+	int prev1 = handData.GetPreviousIndex(prev0);
+	if (handData[prev1].gesture != handData[prev0].gesture)
 	{
-		OnHandGestureEvent.Broadcast(handData[2].gesture);
+		OnHandGestureEvent.Broadcast(handData[prev0].gesture);
 	}
 }
 
 TArray<FVector> UHandControlledComponent::pollFingertips() const
 {
 	TArray<FVector> angles;
-	if (handData.Num() == 0) return angles;
+	int firstIndex = writeIndex;
+	for (int i = 0; i < 3; ++i) firstIndex = handData.GetNextIndex(firstIndex);
 	for (int i = 0; i < 4; ++i) {
-		angles.Add(handData[0].fingersAngles[i]);
+		angles.Add(handData[firstIndex].fingersAngles[i]);
 	}
-	int numElems = handData.Num() - 2;
+	int numElems = 4;
 	float ratio = 1.0f / numElems;
-	for (int i = 1; i < handData.Num() - 1; ++i) {
+	for (int i = handData.GetNextIndex(firstIndex); i != writeIndex; i = handData.GetNextIndex(i)) {
 		for (int j = 0; j < 4; ++j) {
 			angles[j] = FMath::Lerp<FVector, float>(angles[j], handData[i].fingersAngles[j], ratio);
 		}

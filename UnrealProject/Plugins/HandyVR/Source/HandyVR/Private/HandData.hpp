@@ -9,6 +9,7 @@ struct HandData {
 	FTransform transform;
 	Handedness handedness;
 	HandGestures gesture;
+	FVector fingersAngles[4];
 };
 
 static inline FVector toUSpace(const ump::Landmark& landmark) {
@@ -44,6 +45,16 @@ static float approxDepth(const ump::HandLandmarks& landmarks) {
 	return a * 2;
 }
 
+
+static inline float getJointAngleDegrees(const ump::HandLandmarks& landmarks, const FVector& up, int jointIndexStart, int jointIndexEnd) {
+	auto v = toUSpace(landmarks[jointIndexEnd]) - toUSpace(landmarks[jointIndexStart]);
+	v.Normalize();
+	auto v_proj = FVector::VectorPlaneProject(v, up);
+	float angle_rad = FMath::Acos(FVector::DotProduct(v, v_proj)) * -FMath::Sign(FVector::DotProduct(v, up));
+	float angle_deg = FMath::RadiansToDegrees(angle_rad);
+	return angle_deg;
+}
+
 static HandData toHandData(const ump::HandDetectionResult& hand) {
 	HandData handData;
 	handData.handedness = hand.getHandedness() == ump::Handedness::LEFT ? Handedness::LEFT : Handedness::RIGHT;
@@ -75,7 +86,14 @@ static HandData toHandData(const ump::HandDetectionResult& hand) {
 
 	auto r = FVector::CrossProduct(f, u);
 	handData.transform = FTransform(r, f, u, location);
-	//handData.transform = FTransform(r, f, u, FVector(50, 0, 0));
+	
+	for (int i = 5; i < 21; i += 2) {
+		auto& fingerAngles = handData.fingersAngles[(i - 1) / 4 - 1];
+		auto& angle = fingerAngles[(i - 1) % 4];
+		FVector local_up = FVector::CrossProduct(r, toUSpace(hand.Landmarks(i)) - toUSpace(hand.Landmarks(i - 1)));
+		local_up.Normalize();
+		angle = getJointAngleDegrees(hand.Landmarks(), local_up, i, i + 1);
+	}
 
 	return handData;
 }

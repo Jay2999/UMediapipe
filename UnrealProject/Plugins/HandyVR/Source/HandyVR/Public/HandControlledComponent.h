@@ -22,7 +22,8 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-	TArray<HandData> handData;
+	TCircularBuffer<HandData> handData = TCircularBuffer<HandData>(8);
+	int writeIndex = 0;
 
 public:
 	// Called every frame
@@ -35,8 +36,8 @@ public:
 	FHandGestureEvent OnHandGestureEvent;
 
 	inline void pushHandData(HandData&& data) {
-		handData.Add(MoveTemp(data));
-		if (handData.Num() > 5) handData.RemoveAt(0);
+		handData[writeIndex] = MoveTemp(data);
+		writeIndex = handData.GetNextIndex(writeIndex);
 	}
 
 	UFUNCTION(BlueprintCallable)
