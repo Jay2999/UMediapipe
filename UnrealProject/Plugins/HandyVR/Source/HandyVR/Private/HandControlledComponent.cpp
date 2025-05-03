@@ -26,10 +26,7 @@ void UHandControlledComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 		loc = FMath::Lerp<FVector, float>(loc, handData[i].transform.GetLocation(), ratio);
 		rot = FQuat::Slerp(rot, handData[i].transform.GetRotation(), ratio);
 	}
-	HandData data;
-	data.transform = FTransform(rot, loc, FVector(1, 1, 1));
-	data.handedness = Handedness::LEFT;
-	SetRelativeTransform(data.transform);
+	SetRelativeTransform(FTransform(rot, loc, FVector(1, 1, 1)));
 
 	if (handData.Num() > 3 &&
 		handData[0].gesture == handData[1].gesture &&
@@ -38,4 +35,21 @@ void UHandControlledComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	{
 		OnHandGestureEvent.Broadcast(handData[2].gesture);
 	}
+}
+
+TArray<FVector> UHandControlledComponent::pollFingertips() const
+{
+	TArray<FVector> angles;
+	if (handData.Num() == 0) return angles;
+	for (int i = 0; i < 4; ++i) {
+		angles.Add(handData[0].fingersAngles[i]);
+	}
+	int numElems = handData.Num() - 2;
+	float ratio = 1.0f / numElems;
+	for (int i = 1; i < handData.Num() - 1; ++i) {
+		for (int j = 0; j < 4; ++j) {
+			angles[j] = FMath::Lerp<FVector, float>(angles[j], handData[i].fingersAngles[j], ratio);
+		}
+	}
+	return angles;
 }

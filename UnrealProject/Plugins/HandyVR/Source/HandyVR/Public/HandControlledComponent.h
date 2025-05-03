@@ -38,4 +38,7 @@ public:
 		handData.Add(MoveTemp(data));
 		if (handData.Num() > 5) handData.RemoveAt(0);
 	}
+
+	UFUNCTION(BlueprintCallable)
+	TArray<FVector> pollFingertips() const;
 };
