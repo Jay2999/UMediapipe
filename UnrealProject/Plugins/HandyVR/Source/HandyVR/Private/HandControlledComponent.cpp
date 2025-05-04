@@ -38,13 +38,15 @@ void UHandControlledComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	}
 }
 
-TArray<FVector> UHandControlledComponent::pollFingertips() const
+void UHandControlledComponent::pollFingerAngles(TArray<FVector>& angles) const
 {
-	TArray<FVector> angles;
 	int firstIndex = writeIndex;
 	for (int i = 0; i < 3; ++i) firstIndex = handData.GetNextIndex(firstIndex);
-	for (int i = 0; i < 4; ++i) {
-		angles.Add(handData[firstIndex].fingersAngles[i]);
+	if (angles.Num() != 4) {
+		angles = TArray<FVector>(handData[firstIndex].fingersAngles, 4);
+	}
+	else {
+		memcpy(angles.GetData(), handData[firstIndex].fingersAngles, 4 * sizeof(FVector));
 	}
 	int numElems = 4;
 	float ratio = 1.0f / numElems;
@@ -53,5 +55,5 @@ TArray<FVector> UHandControlledComponent::pollFingertips() const
 			angles[j] = FMath::Lerp<FVector, float>(angles[j], handData[i].fingersAngles[j], ratio);
 		}
 	}
-	return angles;
+	//return angles;
 }

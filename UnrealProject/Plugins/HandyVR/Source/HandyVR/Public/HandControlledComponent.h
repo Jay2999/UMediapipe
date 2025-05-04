@@ -41,5 +41,5 @@ public:
 	}
 
 	UFUNCTION(BlueprintCallable)
-	TArray<FVector> pollFingertips() const;
+	void pollFingerAngles(TArray<FVector>& FingersAngles) const;
 };

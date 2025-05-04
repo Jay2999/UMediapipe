@@ -46,11 +46,12 @@ static float approxDepth(const ump::HandLandmarks& landmarks) {
 }
 
 
-static inline float getJointAngleDegrees(const ump::HandLandmarks& landmarks, const FVector& up, int jointIndexStart, int jointIndexEnd) {
+static inline float getJointAngleDegrees(const ump::HandLandmarks& landmarks, const FVector& up, const FVector& fwd, int jointIndexStart, int jointIndexEnd) {
 	auto v = toUSpace(landmarks[jointIndexEnd]) - toUSpace(landmarks[jointIndexStart]);
 	v.Normalize();
-	auto v_proj = FVector::VectorPlaneProject(v, up);
-	float angle_rad = FMath::Acos(FVector::DotProduct(v, v_proj)) * -FMath::Sign(FVector::DotProduct(v, up));
+	auto v_proj = FVector::VectorPlaneProject(v, up) * -FMath::Sign(FVector::DotProduct(v, fwd));
+	v_proj.Normalize();
+	float angle_rad = FMath::Acos(FVector::DotProduct(v, v_proj)) * FMath::Sign(FVector::DotProduct(v, up));
 	float angle_deg = FMath::RadiansToDegrees(angle_rad);
 	return angle_deg;
 }
@@ -76,23 +77,29 @@ static HandData toHandData(const ump::HandDetectionResult& hand) {
 	if (hand.getHandedness() == ump::Handedness::RIGHT) {
 		std::swap(v1, v2);
 	}
-	auto u = FVector::CrossProduct(v1, v2);
+	auto u = -FVector::CrossProduct(v1, v2);
 	u.Normalize();
 
 	auto f = toUSpace(hand.Landmarks(9)) + toUSpace(hand.Landmarks(13)) - 2 * l0 + v1 + v2;
 	f /= 4;
 	f -= FVector::DotProduct(f, u) * u;
 	f.Normalize();
+	f = -f;
 
 	auto r = FVector::CrossProduct(f, u);
-	handData.transform = FTransform(r, f, u, location);
+	handData.transform = FTransform(f, r, u, location);
 	
-	for (int i = 5; i < 21; i += 2) {
-		auto& fingerAngles = handData.fingersAngles[(i - 1) / 4 - 1];
-		auto& angle = fingerAngles[(i - 1) % 4];
-		FVector local_up = FVector::CrossProduct(r, toUSpace(hand.Landmarks(i)) - toUSpace(hand.Landmarks(i - 1)));
-		local_up.Normalize();
-		angle = getJointAngleDegrees(hand.Landmarks(), local_up, i, i + 1);
+	for (int i = 5; i < 21; ++i) {
+		if ((i & 0b11) == 0) continue;
+		const int fingerIndex = (i - 1) / 4 - 1;
+		const int angleIndex = (i - 1) & 0b11;
+		auto& angle = handData.fingersAngles[fingerIndex][angleIndex];
+
+		angle = getJointAngleDegrees(hand.Landmarks(), u, f, i, i + 1);
+		for (int j = angleIndex - 1; j >= 0; --j) {
+			angle -= handData.fingersAngles[fingerIndex][j];
+		}
+		angle = FMath::ClampAngle(angle, -90, 90);
 	}
 
 	return handData;
