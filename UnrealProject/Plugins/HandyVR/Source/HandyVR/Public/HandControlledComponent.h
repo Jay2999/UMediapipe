@@ -22,8 +22,8 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-	TCircularBuffer<HandData> handData = TCircularBuffer<HandData>(8);
-	std::atomic<int> writeIndex = 0;
+	TCircularBuffer<HandData> handData = TCircularBuffer<HandData>(8, HandData());
+	std::atomic<int> writeIndex;
 
 public:
 	// Called every frame

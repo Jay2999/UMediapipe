@@ -6,7 +6,7 @@
 #define APPROX_DEPTH 1
 
 struct HandData {
-	FTransform transform;
+	FTransform transform = FTransform(FVector(40, 0, 0));
 	Handedness handedness;
 	HandGestures gesture;
 	FVector fingersAngles[4];
