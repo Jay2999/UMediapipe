@@ -10,6 +10,8 @@ struct HandData {
 	Handedness handedness;
 	HandGestures gesture;
 	FVector fingersAngles[4];
+	float thumbPitch;
+	FVector thumbAngles;
 };
 
 static inline FVector toUSpace(const ump::Landmark& landmark) {
@@ -88,7 +90,7 @@ static HandData toHandData(const ump::HandDetectionResult& hand) {
 
 	auto r = FVector::CrossProduct(f, u);
 	handData.transform = FTransform(f, r, u, location);
-	
+
 	for (int i = 5; i < 21; ++i) {
 		if ((i & 0b11) == 0) continue;
 		const int fingerIndex = (i - 1) / 4 - 1;
@@ -100,6 +102,18 @@ static HandData toHandData(const ump::HandDetectionResult& hand) {
 			angle -= handData.fingersAngles[fingerIndex][j];
 		}
 		angle = FMath::ClampAngle(angle, -90, 90);
+	}
+
+	handData.thumbPitch = FMath::ClampAngle(getJointAngleDegrees(hand.Landmarks(), u, f, 0, 4), -40, 40);
+	for (int i = 0; i < 3; ++i) {
+		float angle = getJointAngleDegrees(hand.Landmarks(), r, f, i + 1, i + 2);
+		if (handData.handedness == Handedness::RIGHT) {
+			angle *= -1;
+		}
+		for (int j = i - 1; j >= 0; --j) {
+			angle -= handData.thumbAngles[j];
+		}
+		handData.thumbAngles[i] = FMath::ClampAngle(angle, -40, 40);
 	}
 
 	return handData;

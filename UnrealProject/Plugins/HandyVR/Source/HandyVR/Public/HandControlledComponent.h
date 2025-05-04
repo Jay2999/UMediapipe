@@ -23,7 +23,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	TCircularBuffer<HandData> handData = TCircularBuffer<HandData>(8);
-	int writeIndex = 0;
+	std::atomic<int> writeIndex = 0;
 
 public:
 	// Called every frame
@@ -37,9 +37,12 @@ public:
 
 	inline void pushHandData(HandData&& data) {
 		handData[writeIndex] = MoveTemp(data);
-		writeIndex = handData.GetNextIndex(writeIndex);
+		writeIndex.store(handData.GetNextIndex(writeIndex));
 	}
 
 	UFUNCTION(BlueprintCallable)
 	void pollFingerAngles(TArray<FVector>& FingersAngles) const;
+
+	UFUNCTION(BlueprintCallable)
+	void pollThumbAngles(float& pitch, FVector& zAngles) const;
 };
