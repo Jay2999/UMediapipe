@@ -67,10 +67,13 @@ static HandData toHandData(const ump::HandDetectionResult& hand) {
 	auto location = l0;
 #if APPROX_DEPTH
 	float depth = approxDepth(hand.Landmarks());
-	location *= (depth / 2 + 3) / 4;
+	location *= (depth / 2 + 3) / 3;
 	location.X = depth;
 #else
 	location.X += 3;
+#endif
+#if ANDROID
+	location.Z += 0.5;
 #endif
 	location *= 50;
 

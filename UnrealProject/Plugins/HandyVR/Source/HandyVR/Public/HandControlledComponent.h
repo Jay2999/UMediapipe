@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/SceneComponent.h"
+#include "HandEnumLibrary.h"
 #include "HandData.hpp"
 #include "HandControlledComponent.generated.h"
 

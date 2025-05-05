@@ -43,7 +43,7 @@ void UHandControlledComponent::pollFingerAngles(TArray<FVector>& angles) const
 {
 	int wIndex = writeIndex.load();
 	int firstIndex = wIndex;
-	int numElems = 6;
+	int numElems = 3;
 	for (int i = 0; i < numElems; ++i) firstIndex = handData.GetPreviousIndex(firstIndex);
 	if (angles.Num() != 4) {
 		angles = TArray<FVector>(handData[firstIndex].fingersAngles, 4);
@@ -63,7 +63,7 @@ void UHandControlledComponent::pollThumbAngles(float& pitch, FVector& zAngles) c
 {
 	int wIndex = writeIndex.load();
 	int firstIndex = wIndex;
-	int numElems = 6;
+	int numElems = 3;
 	for (int i = 0; i < numElems; ++i) firstIndex = handData.GetPreviousIndex(firstIndex);
 	pitch = handData[firstIndex].thumbPitch;
 	zAngles = handData[firstIndex].thumbAngles;
