@@ -26,10 +26,18 @@ void UHandControlledComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 	float ratio = 1.0f / numElems;
 	for (int i = handData.GetNextIndex(firstIndex); i != wIndex; i = handData.GetNextIndex(i)) {
-		loc = FMath::Lerp<FVector, float>(loc, handData[i].transform.GetLocation(), ratio);
-		rot = FQuat::Slerp(rot, handData[i].transform.GetRotation(), ratio);
+		//loc = FMath::Lerp<FVector, float>(loc, handData[i].transform.GetLocation(), ratio);
+		//rot = FQuat::Slerp(rot, handData[i].transform.GetRotation(), ratio);
+		loc += handData[i].transform.GetLocation();
+		auto q = handData[i].transform.GetRotation();
+		if (rot.X * q.X + rot.Y * q.Y + rot.Z * q.Z + rot.W * q.W < 0) {
+			q = q * -1;
+		}
+		rot += q;
 	}
-	SetRelativeTransform(FTransform(rot, loc, FVector(1, 1, 1)));
+	loc *= ratio;
+	rot *= ratio;
+	SetRelativeTransform(FTransform(rot.GetNormalized(), loc, FVector(1, 1, 1)));
 
 	int prev0 = handData.GetPreviousIndex(wIndex);
 	int prev1 = handData.GetPreviousIndex(prev0);
@@ -54,8 +62,11 @@ void UHandControlledComponent::pollFingerAngles(TArray<FVector>& angles) const
 	float ratio = 1.0f / numElems;
 	for (int i = handData.GetNextIndex(firstIndex); i != wIndex; i = handData.GetNextIndex(i)) {
 		for (int j = 0; j < 4; ++j) {
-			angles[j] = FMath::Lerp<FVector, float>(angles[j], handData[i].fingersAngles[j], ratio);
+			angles[j] += handData[i].fingersAngles[j];
 		}
+	}
+	for (int j = 0; j < 4; ++j) {
+		angles[j] *= ratio;
 	}
 }
 
@@ -65,11 +76,13 @@ void UHandControlledComponent::pollThumbAngles(float& pitch, FVector& zAngles) c
 	int firstIndex = wIndex;
 	int numElems = 3;
 	for (int i = 0; i < numElems; ++i) firstIndex = handData.GetPreviousIndex(firstIndex);
+	float ratio = 1.0f / numElems;
 	pitch = handData[firstIndex].thumbPitch;
 	zAngles = handData[firstIndex].thumbAngles;
-	float ratio = 1.0f / numElems;
 	for (int i = handData.GetNextIndex(firstIndex); i != wIndex; i = handData.GetNextIndex(i)) {
-		pitch = (1.0f - ratio) * pitch + ratio * handData[i].thumbPitch;
-		zAngles = FMath::Lerp<FVector, float>(zAngles, handData[i].thumbAngles, ratio);
+		pitch += handData[i].thumbPitch;
+		zAngles += handData[i].thumbAngles;
 	}
+	pitch *= ratio;
+	zAngles *= ratio;
 }
