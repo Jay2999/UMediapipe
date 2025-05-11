@@ -1,11 +1,10 @@
 #include "../include/UMediapipe.h"
 #include "TfliteModels2.h"
-//#include "mediapipe/framework/port/opencv_calib3d_inc.h"
 #include "opencv2/calib3d.hpp"
 #include "Debug.h"
 
 #include "mediapipe/tasks/cc/vision/gesture_recognizer/gesture_recognizer.h"
-#include "mediapipe/framework/port/opencv_imgproc_inc.h"
+#include "mediapipe/tasks/cc/vision/gesture_recognizer/handedness_util.h"
 
 cv::Mat cameraMtx = (cv::Mat_<float>(3,3) << 0, 0, 0, 0, 0, 0, 0, 0, 1);;
 cv::Mat distCoeffs = (cv::Mat_<float>(4, 1) << 0, 0, 0, 0);
@@ -108,36 +107,36 @@ namespace ump {
 
         // Two hands
         if (result->handedness.size() > 1) {
-            std::string label1 = result->handedness[0].classification(0).label();
-            std::string label2 = result->handedness[1].classification(0).label();
-            if (label1 == label2) {
-                const auto& score1 = result->handedness[0].classification(0).score();
-                const auto& score2 = result->handedness[1].classification(0).score();
-                if (score1 < score2) {
-                    label1 = label1 == "Left" ? "Right" : "Left";
-                } else {
-                    label2 = label2 == "Left" ? "Right" : "Left";
-                }
-            }
-            if (label1 == "Left") {
-                hands[0].getHandedness() = Handedness::LEFT;
-                hands[1].getHandedness() = Handedness::RIGHT;
-            } else {
-                hands[0].getHandedness() = Handedness::RIGHT;
-                hands[1].getHandedness() = Handedness::LEFT;
-            }
+            auto max_right = std::max_element(result->handedness.begin(), result->handedness.end(),
+                [](const mediapipe::ClassificationList& a, const mediapipe::ClassificationList& b) {
+                    const auto& s1 = mediapipe::tasks::vision::gesture_recognizer::GetRightHandScore(a);
+                    const auto& s2 = mediapipe::tasks::vision::gesture_recognizer::GetRightHandScore(b);
+                    if (s1.ok() && s2.ok()) {
+                        return *s1 < *s2;
+                    } else if (s1.ok()) {
+                        return false;
+                    } else {
+                        return true;
+                    }
+            });
+            const int right_index = max_right - result->handedness.begin();
+            const int left_index = 1 - right_index;
+            hands[left_index].getHandedness() = Handedness::LEFT;
+            hands[right_index].getHandedness() = Handedness::RIGHT;
             handCallback(&hands[0]);
             handCallback(&hands[1]);
 
         // One hand
         } else if (result->handedness.size() > 0) {
-            const std::string& label = result->handedness[0].classification(0).label();
-            if (label == "Left") {
-                hands[0].getHandedness() = Handedness::LEFT;
-            } else {
-                hands[0].getHandedness() = Handedness::RIGHT;
+            const auto& rightHandScore = mediapipe::tasks::vision::gesture_recognizer::GetRightHandScore(result->handedness[0]);
+            if (rightHandScore.ok()) {
+                if (*rightHandScore < 0.5) {
+                    hands[0].getHandedness() = Handedness::LEFT;
+                } else {
+                    hands[0].getHandedness() = Handedness::RIGHT;
+                }
+                handCallback(&hands[0]);
             }
-            handCallback(&hands[0]);
         }
     }
 
