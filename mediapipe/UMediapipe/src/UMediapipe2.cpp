@@ -162,7 +162,7 @@ namespace ump {
         }
 
         auto input_frame = std::make_shared<mediapipe::ImageFrame>(mediapipe::ImageFormat::SRGB, frameWidth, frameHeight, mediapipe::ImageFrame::kDefaultAlignmentBoundary);
-        input_frame->CopyPixelData(mediapipe::ImageFormat::SRGB, frameWidth, frameHeight, data, mediapipe::ImageFrame::kDefaultAlignmentBoundary);
+        input_frame->CopyPixelData(mediapipe::ImageFormat::SRGBA, frameWidth, frameHeight, data, mediapipe::ImageFrame::kDefaultAlignmentBoundary);
         mediapipe::Image input(input_frame);
 
         size_t frame_timestamp_us = (double) cv::getTickCount() / (double) cv::getTickFrequency() * 1e6;

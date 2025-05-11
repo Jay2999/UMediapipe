@@ -7,34 +7,24 @@
 #include "HandData.hpp"
 #include "HandControlledComponent.h"
 
-static TArray<UHandControlledComponent*>* leftControlledCtx = nullptr;
-static TArray<UHandControlledComponent*>* rightControlledCtx = nullptr;
+static TArray<UHandControlledComponent*> leftControlledCtx;
+static TArray<UHandControlledComponent*> rightControlledCtx;
 
 static void handCallback(ump::HandDetectionResult* hand) {
 	auto handData = toHandData(*hand);
-	if (handData.handedness == Handedness::LEFT && leftControlledCtx) {
-		for (auto& comps : *leftControlledCtx) {
+	if (handData.handedness == Handedness::LEFT) {
+		for (auto& comps : leftControlledCtx) {
 			comps->pushHandData(MoveTemp(handData));
 		}
 	}
-	else if (rightControlledCtx) {
-		for (auto& comps : *rightControlledCtx) {
+	else {
+		for (auto& comps : rightControlledCtx) {
 			comps->pushHandData(MoveTemp(handData));
 		}
 	}
 }
 
-CameraFrame::CameraFrame(TArray<FColor>&& pixels) : pixels(std::move(pixels))
-{
-	hash = 0;
-	for (int i = 0; i < this->pixels.Num(); i += this->pixels.Num() / 20) {
-		hash += this->pixels[i].R;
-		hash += this->pixels[i].G;
-		hash += this->pixels[i].B;
-	}
-}
-
-UHandTrackerComponent::UHandTrackerComponent() : frames(new TCircularQueue<CameraFrame>(3))
+UHandTrackerComponent::UHandTrackerComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 
@@ -52,18 +42,23 @@ UHandTrackerComponent::UHandTrackerComponent() : frames(new TCircularQueue<Camer
 	else {
 		UE_LOG(LogTemp, Error, TEXT("Could not find DefaultMediaTexture."));
 	}
-	leftControlledCtx = &leftHandControlledComponents;
-	rightControlledCtx = &rightHandControlledComponents;
 }
 
 UHandTrackerComponent::~UHandTrackerComponent()
 {
-	if (rgbArray) {
-		delete[] rgbArray;
-		rgbArray = nullptr;
+	_ump->stopHandDetection();
+	auto actor = GetOwner();
+	if (actor) {
+		TInlineComponentArray<UHandControlledComponent*> controlledComponents(actor, true);
+		for (const auto& comp : controlledComponents) {
+			if (comp->laterality == Handedness::LEFT) {
+				leftControlledCtx.Remove(comp);
+			}
+			else {
+				rightControlledCtx.Remove(comp);
+			}
+		}
 	}
-	leftControlledCtx = nullptr;
-	rightControlledCtx = nullptr;
 }
 
 // Called when the game starts
@@ -77,10 +72,10 @@ void UHandTrackerComponent::BeginPlay()
 		TInlineComponentArray<UHandControlledComponent*> controlledComponents(actor, true);
 		for (const auto& comp : controlledComponents) {
 			if (comp->laterality == Handedness::LEFT) {
-				leftHandControlledComponents.Add(comp);
+				leftControlledCtx.Add(comp);
 			}
 			else {
-				rightHandControlledComponents.Add(comp);
+				rightControlledCtx.Add(comp);
 			}
 		}
 	}
@@ -102,9 +97,7 @@ void UHandTrackerComponent::OnPlayingVideo()
 		targetCameraHeight = dims.Y;
 	}
 	cameraTextureRT = UKismetRenderingLibrary::CreateRenderTarget2D(this, targetCameraWidth, targetCameraHeight, RTF_RGBA8);
-	if (stripAlphaChannel) {
-		rgbArray = new uint8_t[targetCameraWidth * targetCameraHeight * 3];
-	}
+	pixels.AddUninitialized(targetCameraHeight * targetCameraWidth);
 	_ump = MakeUnique<ump::UMediapipe>(handCallback, targetCameraWidth, targetCameraHeight);
 	_ump->beginHandDetection();
 }
@@ -114,39 +107,8 @@ void UHandTrackerComponent::processCameraFrame()
 	if (!cameraTextureRT) return;
 	UKismetRenderingLibrary::DrawMaterialToRenderTarget(this, cameraTextureRT, cameraTextureMaterial);
 
-	/*ENQUEUE_RENDER_COMMAND(ReadCameraTexture)(
-		[this](FRHICommandListImmediate& RHICmdList) {
-			auto* rt = cameraTextureRT->GetRenderTargetResource();*/
 	auto* rt = cameraTextureRT->GameThread_GetRenderTargetResource();
-	if (rt) {
-		TArray<FColor> pixels;
-		pixels.AddUninitialized(targetCameraHeight * targetCameraWidth);
-		if (rt->ReadPixels(pixels)) {
-			CameraFrame frame(std::move(pixels));
-			const auto oldFrame = frames->Peek();
-			if (!oldFrame || !(frame == *oldFrame)) {
-				frames->Enqueue(std::move(frame));
-			}
-		}
-	}
-	//}
-//);
-
-	CameraFrame frame;
-	bool hasFrame = frames->Dequeue(frame);
-	if (hasFrame) {
-		if (stripAlphaChannel) {
-			int it = 0;
-			for (int i = 0; i < frame.getPixels().Num(); ++i) {
-				rgbArray[it++] = frame.getPixels()[i].R;
-				rgbArray[it++] = frame.getPixels()[i].G;
-				rgbArray[it++] = frame.getPixels()[i].B;
-			}
-			_ump->sendFrame(rgbArray);
-		}
-		else
-		{
-			_ump->sendFrame((uint8_t*)frame.getPixels().GetData());
-		}
+	if (rt && rt->ReadPixels(pixels)) {
+		_ump->sendFrame((uint8_t*)pixels.GetData());
 	}
 }
