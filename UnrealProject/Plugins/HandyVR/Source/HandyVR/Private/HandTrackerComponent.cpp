@@ -46,19 +46,8 @@ UHandTrackerComponent::UHandTrackerComponent()
 
 UHandTrackerComponent::~UHandTrackerComponent()
 {
-	_ump->stopHandDetection();
-	auto actor = GetOwner();
-	if (actor) {
-		TInlineComponentArray<UHandControlledComponent*> controlledComponents(actor, true);
-		for (const auto& comp : controlledComponents) {
-			if (comp->laterality == Handedness::LEFT) {
-				leftControlledCtx.Remove(comp);
-			}
-			else {
-				rightControlledCtx.Remove(comp);
-			}
-		}
-	}
+	if (_ump) _ump->stopHandDetection();
+	_ump.Release();
 }
 
 // Called when the game starts
@@ -76,6 +65,22 @@ void UHandTrackerComponent::BeginPlay()
 			}
 			else {
 				rightControlledCtx.Add(comp);
+			}
+		}
+	}
+}
+
+void UHandTrackerComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	auto actor = GetOwner();
+	if (actor) {
+		TInlineComponentArray<UHandControlledComponent*> controlledComponents(actor, true);
+		for (const auto& comp : controlledComponents) {
+			if (comp->laterality == Handedness::LEFT) {
+				leftControlledCtx.Remove(comp);
+			}
+			else {
+				rightControlledCtx.Remove(comp);
 			}
 		}
 	}

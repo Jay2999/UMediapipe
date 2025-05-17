@@ -26,8 +26,6 @@ void UHandControlledComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 	float ratio = 1.0f / numElems;
 	for (int i = handData.GetNextIndex(firstIndex); i != wIndex; i = handData.GetNextIndex(i)) {
-		//loc = FMath::Lerp<FVector, float>(loc, handData[i].transform.GetLocation(), ratio);
-		//rot = FQuat::Slerp(rot, handData[i].transform.GetRotation(), ratio);
 		loc += handData[i].transform.GetLocation();
 		auto q = handData[i].transform.GetRotation();
 		if (rot.X * q.X + rot.Y * q.Y + rot.Z * q.Z + rot.W * q.W < 0) {
