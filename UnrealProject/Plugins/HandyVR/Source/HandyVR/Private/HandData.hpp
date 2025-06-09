@@ -51,7 +51,7 @@ static float approxDepth(const ump::HandLandmarks& landmarks) {
 static inline float getJointAngleDegrees(const ump::HandLandmarks& landmarks, const FVector& up, const FVector& fwd, int jointIndexStart, int jointIndexEnd) {
 	auto v = toUSpace(landmarks[jointIndexEnd]) - toUSpace(landmarks[jointIndexStart]);
 	v.Normalize();
-	auto v_proj = FVector::VectorPlaneProject(v, up) * -FMath::Sign(FVector::DotProduct(v, fwd));
+	auto v_proj = FVector::VectorPlaneProject(v, up) * FMath::Sign(FVector::DotProduct(v, fwd));
 	v_proj.Normalize();
 	float angle_rad = FMath::Acos(FVector::DotProduct(v, v_proj)) * FMath::Sign(FVector::DotProduct(v, up));
 	float angle_deg = FMath::RadiansToDegrees(angle_rad);
@@ -79,21 +79,20 @@ static HandData toHandData(const ump::HandDetectionResult& hand) {
 
 	auto v1 = toUSpace(hand.Landmarks(5)) - l0;
 	auto v2 = toUSpace(hand.Landmarks(17)) - l0;
-	if (hand.getHandedness() == ump::Handedness::RIGHT) {
+	if (hand.getHandedness() == ump::Handedness::LEFT) {
 		std::swap(v1, v2);
 	}
-	auto u = -FVector::CrossProduct(v1, v2);
+	auto u = FVector::CrossProduct(v1, v2);
 	u.Normalize();
 
 	auto f = toUSpace(hand.Landmarks(9)) + toUSpace(hand.Landmarks(13)) - 2 * l0 + v1 + v2;
 	f /= 4;
 	f -= FVector::DotProduct(f, u) * u;
 	f.Normalize();
-	f = -f;
 
-	auto r = FVector::CrossProduct(f, u);
+	auto r = -FVector::CrossProduct(f, u);
 	handData.transform = FTransform(f, r, u, location);
-
+	
 	for (int i = 5; i < 21; ++i) {
 		if ((i & 0b11) == 0) continue;
 		const int fingerIndex = (i - 1) / 4 - 1;

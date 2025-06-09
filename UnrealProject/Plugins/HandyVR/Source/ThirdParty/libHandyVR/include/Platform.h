@@ -9,7 +9,6 @@
 #endif // _MSC_VER
 
 #if WINDOWS
-#define UMP_CALL
 #ifdef DLL_EXPORT
     #define UMP_API __declspec(dllexport)
 #else
@@ -18,10 +17,5 @@
 #endif // WINDOWS
 
 #if ANDROID
-#define UMP_API
-#ifdef DLL_EXPORT
-    #define UMP_CALL
-#else
-    #define UMP_CALL //__attribute__((weak))
-#endif // DLL_EXPORT
+    #define UMP_API
 #endif // ANDROID
